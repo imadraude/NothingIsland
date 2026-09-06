@@ -24,11 +24,32 @@ android {
         }
     }
 
+    signingConfigs {
+        create("release") {
+            val envStore = System.getenv("KEYSTORE_PATH")
+            val releaseKeystoreFile = when {
+                envStore != null && file(envStore).exists() -> file(envStore)
+                file("release.keystore").exists() -> file("release.keystore")
+                file("debug.keystore").exists() -> file("debug.keystore")
+                else -> null
+            }
+
+            if (releaseKeystoreFile != null) {
+                storeFile = releaseKeystoreFile
+                storePassword = System.getenv("KEYSTORE_PASSWORD") ?: "android"
+                keyAlias = System.getenv("KEY_ALIAS") ?: "androiddebugkey"
+                keyPassword = System.getenv("KEY_PASSWORD") ?: "android"
+            }
+        }
+    }
+
     buildTypes {
         getByName("debug") {
+            signingConfig = signingConfigs.getByName("release")
             isMinifyEnabled = false
         }
         getByName("release") {
+            signingConfig = signingConfigs.getByName("release")
             isMinifyEnabled = false
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
