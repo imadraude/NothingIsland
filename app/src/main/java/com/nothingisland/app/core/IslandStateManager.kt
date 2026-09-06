@@ -54,7 +54,7 @@ class IslandStateManager(
                 } else {
                     scheduleAutoDismiss(delayMs = 3000L) {
                         currentMedia = null
-                        resolveFallbackState()
+                        _state.value = resolveFallbackState()
                     }
                 }
             }
@@ -73,7 +73,7 @@ class IslandStateManager(
         autoDismissJob?.cancel()
         _state.value = IslandState.Compact.Notification(notification)
         scheduleAutoDismiss(delayMs = 4500L) {
-            resolveFallbackState()
+            _state.value = resolveFallbackState()
         }
     }
 
@@ -82,7 +82,7 @@ class IslandStateManager(
         autoDismissJob?.cancel()
         _state.value = IslandState.Compact.Battery(battery)
         scheduleAutoDismiss(delayMs = 3500L) {
-            resolveFallbackState()
+            _state.value = resolveFallbackState()
         }
     }
 
@@ -92,7 +92,7 @@ class IslandStateManager(
             autoDismissJob?.cancel()
             _state.value = IslandState.Compact.Volume(volume)
             scheduleAutoDismiss(delayMs = 2000L) {
-                resolveFallbackState()
+                _state.value = resolveFallbackState()
             }
         }
     }
