@@ -7,12 +7,16 @@ android {
     namespace = "com.nothingisland.app"
     compileSdk = 34
 
+    val gitCommitCount = providers.exec {
+        commandLine("git", "rev-list", "--count", "HEAD")
+    }.standardOutput.asText.map { it.trim().toIntOrNull() ?: 1 }.orElse(1)
+
     defaultConfig {
         applicationId = "com.nothingisland.app"
         minSdk = 26
         targetSdk = 34
-        versionCode = 1
-        versionName = "1.0.0"
+        versionCode = gitCommitCount.get()
+        versionName = "0.1.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables {
