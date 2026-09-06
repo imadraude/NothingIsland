@@ -1,19 +1,16 @@
-name: Build & Release Android APK
+name: Publish Release
 
 on:
   push:
-    branches: [ "main", "master" ]
     tags: [ "v*" ]
-  pull_request:
-    branches: [ "main", "master" ]
   workflow_dispatch:
 
 permissions:
   contents: write
 
 jobs:
-  build:
-    name: Build & Release APK
+  build-and-release:
+    name: Build & Publish Release APK
     runs-on: ubuntu-latest
 
     steps:
@@ -35,19 +32,17 @@ jobs:
       - name: Run Unit Tests
         run: ./gradlew testReleaseUnitTest --stacktrace
 
-      - name: Build APK
-        run: ./gradlew assembleDebug assembleRelease --stacktrace
+      - name: Build Signed Release APK
+        run: ./gradlew assembleRelease --stacktrace
 
-      - name: Prepare APK Artifacts
+      - name: Prepare APK & Checksum
         id: prep
         run: |
           VERSION=$(grep 'versionName = ' app/build.gradle.kts | head -n 1 | sed -E 's/.*"([^"]+)".*/\1/')
           APK_NAME="NothingIsland-v${VERSION}.apk"
           if [ -f "app/build/outputs/apk/release/app-release.apk" ]; then
             cp app/build/outputs/apk/release/app-release.apk "$APK_NAME"
-          elif [ -f "app/build/outputs/apk/debug/app-debug.apk" ]; then
-            cp app/build/outputs/apk/debug/app-debug.apk "$APK_NAME"
-          elif [ -f "app/build/outputs/apk/release/app-release-unsigned.apk" ]; then
+          else
             cp app/build/outputs/apk/release/app-release-unsigned.apk "$APK_NAME"
           fi
           sha256sum "$APK_NAME" > "${APK_NAME}.sha256"
@@ -55,7 +50,7 @@ jobs:
           echo "checksum_path=${APK_NAME}.sha256" >> "$GITHUB_OUTPUT"
           echo "version=$VERSION" >> "$GITHUB_OUTPUT"
 
-      - name: Upload APK as Artifact
+      - name: Upload APK Artifact
         uses: actions/upload-artifact@v4
         with:
           name: NothingIsland-APK
@@ -65,7 +60,6 @@ jobs:
           retention-days: 14
 
       - name: Publish GitHub Release
-        if: startsWith(github.ref, 'refs/tags/v')
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ github.ref_name }}

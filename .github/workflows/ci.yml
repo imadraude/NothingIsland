@@ -1,0 +1,33 @@
+name: CI (Test & Check)
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+  workflow_dispatch:
+
+jobs:
+  test-and-check:
+    name: Unit Tests & Build Validation
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+          cache: 'gradle'
+
+      - name: Make gradlew executable
+        run: chmod +x gradlew
+
+      - name: Run Unit Tests
+        run: ./gradlew testReleaseUnitTest --stacktrace
+
+      - name: Build Debug Check
+        run: ./gradlew assembleDebug --stacktrace
