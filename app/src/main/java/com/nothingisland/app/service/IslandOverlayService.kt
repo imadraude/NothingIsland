@@ -8,9 +8,14 @@ import android.content.Intent
 import android.graphics.PixelFormat
 import android.os.Build
 import android.os.IBinder
-import android.util.DisplayMetrics
 import android.view.Gravity
 import android.view.WindowManager
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.ComposeView
 import androidx.compose.ui.platform.ViewCompositionStrategy
 import androidx.core.app.NotificationCompat
@@ -28,6 +33,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.launch
 
 class IslandOverlayService : Service() {
@@ -73,12 +79,45 @@ class IslandOverlayService : Service() {
             setViewTreeSavedStateRegistryOwner(serviceLifecycleOwner)
             setViewTreeViewModelStoreOwner(serviceLifecycleOwner)
 
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+                setOnApplyWindowInsetsListener { view, insets ->
+                    val cutout = insets.displayCutout
+                    if (cutout != null) {
+                        val rect = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                            cutout.boundingRectTop
+                        } else {
+                            cutout.boundingRects.firstOrNull()
+                        }
+                        if (rect != null && !rect.isEmpty) {
+                            val density = view.resources.displayMetrics.density
+                            val screenWidthPx = view.resources.displayMetrics.widthPixels
+                            val topMarginDp = rect.top / density
+                            val diameterDp = (rect.bottom - rect.top) / density
+                            val centerXOffsetDp = (rect.centerX() - (screenWidthPx / 2f)) / density
+
+                            IslandApplication.updateCutout(
+                                topMarginDp = topMarginDp,
+                                diameterDp = diameterDp,
+                                centerXOffsetDp = centerXOffsetDp
+                            )
+                        }
+                    }
+                    insets
+                }
+            }
+
             setContent {
+                val config by IslandApplication.cutoutConfigFlow.collectAsState()
                 NothingIslandTheme {
-                    NothingIslandRoot(
-                        stateManager = IslandApplication.stateManager,
-                        config = IslandApplication.cutoutConfig
-                    )
+                    Box(
+                        modifier = Modifier.fillMaxSize(),
+                        contentAlignment = Alignment.TopCenter
+                    ) {
+                        NothingIslandRoot(
+                            stateManager = IslandApplication.stateManager,
+                            config = config
+                        )
+                    }
                 }
             }
         }
@@ -89,7 +128,10 @@ class IslandOverlayService : Service() {
 
     private fun observeState() {
         scope.launch {
-            IslandApplication.stateManager.state.collectLatest { state ->
+            combine(
+                IslandApplication.stateManager.state,
+                IslandApplication.cutoutConfigFlow
+            ) { state, _ -> state }.collectLatest { state ->
                 composeView?.let { view ->
                     val updatedParams = createLayoutParams(state)
                     try {
@@ -103,21 +145,28 @@ class IslandOverlayService : Service() {
     }
 
     private fun createLayoutParams(state: IslandState): WindowManager.LayoutParams {
-        val displayMetrics = resources.displayMetrics
-        val density = displayMetrics.density
+        val config = IslandApplication.cutoutConfig
+        val density = resources.displayMetrics.density
 
         val (wDp, hDp, touchable) = when (state) {
             is IslandState.Idle -> Triple(1, 1, false)
-            is IslandState.Compact -> Triple(
-                (IslandApplication.cutoutConfig.compactPillWidthDp + 20).toInt(),
-                (IslandApplication.cutoutConfig.compactPillHeightDp + IslandApplication.cutoutConfig.cameraTopMarginDp + 10).toInt(),
-                true
-            )
-            is IslandState.Expanded -> Triple(
-                (IslandApplication.cutoutConfig.expandedCardWidthDp + 20).toInt(),
-                (IslandApplication.cutoutConfig.expandedCardHeightDp + IslandApplication.cutoutConfig.cameraTopMarginDp + 10).toInt(),
-                true
-            )
+            is IslandState.Compact -> {
+                val targetW = when (state) {
+                    is IslandState.Compact.Notification -> config.compactNotifWidthDp
+                    is IslandState.Compact.Battery -> config.compactBatteryWidthDp
+                    is IslandState.Compact.Timer -> config.compactTimerWidthDp
+                    is IslandState.Compact.Volume -> config.compactVolumeWidthDp
+                    is IslandState.Compact.Media -> config.compactMediaWidthDp
+                }
+                val windowW = (targetW + 24f).toInt()
+                val windowH = (config.pillTopMarginDp + config.compactPillHeightDp + 20f).toInt()
+                Triple(windowW, windowH, true)
+            }
+            is IslandState.Expanded -> {
+                val windowW = (config.expandedCardWidthDp + 24f).toInt()
+                val windowH = (config.pillTopMarginDp + config.expandedCardHeightDp + 24f).toInt()
+                Triple(windowW, windowH, true)
+            }
         }
 
         val widthPx = (wDp * density).toInt()
@@ -139,8 +188,11 @@ class IslandOverlayService : Service() {
             PixelFormat.TRANSLUCENT
         ).apply {
             gravity = Gravity.TOP or Gravity.CENTER_HORIZONTAL
-            x = (IslandApplication.cutoutConfig.cameraCenterXOffsetDp * density).toInt()
+            x = (config.cameraCenterXOffsetDp * density).toInt()
             y = 0
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+                layoutInDisplayCutoutMode = WindowManager.LayoutParams.LAYOUT_IN_DISPLAY_CUTOUT_MODE_ALWAYS
+            }
         }
     }
 

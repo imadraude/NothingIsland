@@ -108,7 +108,8 @@ fun MainScreen() {
     val liveConfig = CutoutConfig(
         cameraTopMarginDp = topMargin,
         cameraDiameterDp = cameraDiameter,
-        compactPillWidthDp = compactWidth
+        compactPillWidthDp = compactWidth,
+        compactMediaWidthDp = compactWidth
     )
     IslandApplication.cutoutConfig = liveConfig
 
@@ -174,7 +175,7 @@ fun MainScreen() {
                 // Simulated Nothing Phone (2a) Camera Punch-hole
                 Box(
                     modifier = Modifier
-                        .padding(top = (topMargin + 2).dp)
+                        .padding(top = topMargin.dp)
                         .size(cameraDiameter.dp)
                         .clip(CircleShape)
                         .background(Color(0xFF080808))

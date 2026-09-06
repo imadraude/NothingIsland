@@ -52,6 +52,11 @@ fun NothingIslandRoot(
     // Dimensions derived from current state
     val targetWidth = when (state) {
         is IslandState.Idle -> 0.dp
+        is IslandState.Compact.Media -> config.compactMediaWidthDp.dp
+        is IslandState.Compact.Notification -> config.compactNotifWidthDp.dp
+        is IslandState.Compact.Battery -> config.compactBatteryWidthDp.dp
+        is IslandState.Compact.Timer -> config.compactTimerWidthDp.dp
+        is IslandState.Compact.Volume -> config.compactVolumeWidthDp.dp
         is IslandState.Compact -> config.compactPillWidthDp.dp
         is IslandState.Expanded -> config.expandedCardWidthDp.dp
     }
@@ -64,7 +69,7 @@ fun NothingIslandRoot(
 
     val targetCornerRadius = when (state) {
         is IslandState.Idle -> 20.dp
-        is IslandState.Compact -> (config.compactPillHeightDp / 2).dp
+        is IslandState.Compact -> (config.compactPillHeightDp / 2f).dp
         is IslandState.Expanded -> 28.dp
     }
 
@@ -106,7 +111,7 @@ fun NothingIslandRoot(
 
     Box(
         modifier = modifier
-            .offset(x = config.cameraCenterXOffsetDp.dp, y = config.cameraTopMarginDp.dp)
+            .offset(y = config.pillTopMarginDp.dp)
             .width(animatedWidth)
             .height(animatedHeight)
             .shadow(

@@ -1,15 +1,25 @@
 package com.nothingisland.app.model
 
 /**
- * Calibrated dimensions for Nothing Phone (2a) cutout.
- * Center punch-hole camera at top of display.
+ * Calibrated dimensions for Nothing Phone (2a) centered punch-hole camera.
  */
 data class CutoutConfig(
-    val cameraCenterXOffsetDp: Float = 0f, // 0 = perfectly centered horizontally
-    val cameraTopMarginDp: Float = 11f,    // Distance from top edge to top of camera cutout
-    val cameraDiameterDp: Float = 34f,     // Circular punch-hole diameter
-    val compactPillHeightDp: Float = 38f,  // Resting pill height
-    val compactPillWidthDp: Float = 160f,  // Resting pill width flanking camera
-    val expandedCardWidthDp: Float = 360f, // Expanded card width
-    val expandedCardHeightDp: Float = 170f // Expanded card height
-)
+    val cameraCenterXOffsetDp: Float = 0f,
+    val cameraTopMarginDp: Float = 10f,      // Distance from top of screen to top of camera cutout
+    val cameraDiameterDp: Float = 34f,       // Hardware camera cutout diameter
+    val compactPillHeightDp: Float = 42f,    // Height of resting pill (34 + 8dp OLED bezel)
+    val compactMediaWidthDp: Float = 184f,   // Width for media playback (art + visualizer)
+    val compactNotifWidthDp: Float = 240f,   // Width for notification preview
+    val compactBatteryWidthDp: Float = 144f, // Width for battery HUD
+    val compactTimerWidthDp: Float = 168f,   // Width for countdown timer
+    val compactVolumeWidthDp: Float = 150f,  // Width for volume indicator
+    val compactPillWidthDp: Float = 184f,    // Default compact width fallback
+    val expandedCardWidthDp: Float = 356f,   // Expanded card width
+    val expandedCardHeightDp: Float = 205f   // Expanded card height ensuring camera clearance
+) {
+    val cameraCenterYDp: Float
+        get() = cameraTopMarginDp + (cameraDiameterDp / 2f)
+
+    val pillTopMarginDp: Float
+        get() = (cameraCenterYDp - (compactPillHeightDp / 2f)).coerceAtLeast(0f)
+}

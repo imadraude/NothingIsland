@@ -29,6 +29,7 @@ import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.nothingisland.app.model.CutoutConfig
@@ -47,11 +48,11 @@ fun CompactPillContent(
     Row(
         modifier = modifier
             .fillMaxSize()
-            .padding(horizontal = 10.dp),
+            .padding(horizontal = 12.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.SpaceBetween
     ) {
-        // Left side of camera hole
+        // Left side of camera hole (symmetrically allocated)
         Box(
             modifier = Modifier
                 .weight(1f)
@@ -66,14 +67,14 @@ fun CompactPillContent(
                             bitmap = art.asImageBitmap(),
                             contentDescription = null,
                             modifier = Modifier
-                                .size(24.dp)
-                                .clip(RoundedCornerShape(6.dp)),
+                                .size(26.dp)
+                                .clip(RoundedCornerShape(7.dp)),
                             contentScale = ContentScale.Crop
                         )
                     } else {
                         Box(
                             modifier = Modifier
-                                .size(24.dp)
+                                .size(26.dp)
                                 .clip(CircleShape)
                                 .background(NothingRed.copy(alpha = 0.2f)),
                             contentAlignment = Alignment.Center
@@ -82,7 +83,7 @@ fun CompactPillContent(
                                 imageVector = Icons.Default.MusicNote,
                                 contentDescription = null,
                                 tint = NothingRed,
-                                modifier = Modifier.size(14.dp)
+                                modifier = Modifier.size(15.dp)
                             )
                         }
                     }
@@ -92,15 +93,15 @@ fun CompactPillContent(
                         imageVector = Icons.Default.Notifications,
                         contentDescription = null,
                         tint = NothingWhite,
-                        modifier = Modifier.size(16.dp)
+                        modifier = Modifier.size(18.dp)
                     )
                 }
                 is IslandState.Compact.Battery -> {
                     Icon(
                         imageVector = Icons.Default.BatteryChargingFull,
                         contentDescription = null,
-                        tint = NothingRed,
-                        modifier = Modifier.size(18.dp)
+                        tint = if (state.battery.isCharging) NothingRed else NothingWhite,
+                        modifier = Modifier.size(20.dp)
                     )
                 }
                 is IslandState.Compact.Volume -> {
@@ -108,7 +109,7 @@ fun CompactPillContent(
                         imageVector = Icons.Default.VolumeUp,
                         contentDescription = null,
                         tint = NothingWhite,
-                        modifier = Modifier.size(16.dp)
+                        modifier = Modifier.size(18.dp)
                     )
                 }
                 is IslandState.Compact.Timer -> {
@@ -116,16 +117,16 @@ fun CompactPillContent(
                         imageVector = Icons.Default.Timer,
                         contentDescription = null,
                         tint = NothingRed,
-                        modifier = Modifier.size(16.dp)
+                        modifier = Modifier.size(18.dp)
                     )
                 }
             }
         }
 
-        // Center space reserved for the physical punch-hole camera on Nothing Phone (2a)
-        Spacer(modifier = Modifier.width(config.cameraDiameterDp.dp))
+        // Dedicated exclusion zone centered over hardware punch-hole camera
+        Spacer(modifier = Modifier.width((config.cameraDiameterDp + 12f).dp))
 
-        // Right side of camera hole
+        // Right side of camera hole (symmetrically allocated)
         Box(
             modifier = Modifier
                 .weight(1f)
@@ -137,7 +138,7 @@ fun CompactPillContent(
                     NdotVisualizer(
                         isPlaying = state.media.isPlaying,
                         activeColor = NothingRed,
-                        size = 18.dp
+                        size = 20.dp
                     )
                 }
                 is IslandState.Compact.Notification -> {
@@ -147,6 +148,7 @@ fun CompactPillContent(
                         fontSize = 11.sp,
                         fontWeight = FontWeight.Medium,
                         maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
                         fontFamily = FontFamily.Monospace
                     )
                 }
@@ -154,7 +156,7 @@ fun CompactPillContent(
                     Text(
                         text = "${state.battery.percentage}%",
                         color = if (state.battery.isCharging) NothingRed else NothingWhite,
-                        fontSize = 11.sp,
+                        fontSize = 12.sp,
                         fontWeight = FontWeight.Bold,
                         fontFamily = FontFamily.Monospace
                     )
