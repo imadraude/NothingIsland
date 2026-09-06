@@ -65,7 +65,8 @@ class IslandStateManagerTest {
     }
 
     @Test
-    fun temporaryBatteryEvent_autoDismissesToFallback() = testScope.runTest {
+    fun temporaryBatteryEvent_autoDismissesToFallback() = runTest(testDispatcher) {
+        stateManager = IslandStateManager(scope = this)
         val media = IslandEvent.Media(
             packageName = "com.spotify.music",
             appName = "Spotify",
@@ -80,8 +81,9 @@ class IslandStateManagerTest {
 
         assertTrue(stateManager.state.value is IslandState.Compact.Battery)
 
-        // Advance past 3500ms auto dismiss
-        advanceTimeBy(3600L)
+        // Advance past 3500ms auto dismiss and run scheduled coroutines
+        testScheduler.advanceTimeBy(3600L)
+        testScheduler.runCurrent()
 
         // Fallback should be playing media
         assertTrue(stateManager.state.value is IslandState.Compact.Media)
