@@ -56,8 +56,15 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.core.content.ContextCompat
+import com.nothingisland.app.BuildConfig
 import com.nothingisland.app.IslandApplication
+import com.nothingisland.app.data.update.GitHubUpdateManager
+import com.nothingisland.app.model.AppUpdate
+import com.nothingisland.app.ui.components.NothingUpdateDialog
+import kotlinx.coroutines.launch
 import com.nothingisland.app.model.CutoutConfig
 import com.nothingisland.app.model.IslandEvent
 import com.nothingisland.app.service.IslandNotificationListener
@@ -104,6 +111,25 @@ fun MainScreen() {
         compactPillWidthDp = compactWidth
     )
     IslandApplication.cutoutConfig = liveConfig
+
+    val scope = rememberCoroutineScope()
+    val updateManager = remember { GitHubUpdateManager(context) }
+    var updateInfo by remember { mutableStateOf<AppUpdate?>(null) }
+    var showUpdateDialog by remember { mutableStateOf(false) }
+    var isDownloadingUpdate by remember { mutableStateOf(false) }
+    var downloadProgress by remember { mutableIntStateOf(0) }
+    var isCheckingUpdate by remember { mutableStateOf(false) }
+    var updateCheckStatus by remember { mutableStateOf<String?>(null) }
+
+    LaunchedEffect(Unit) {
+        val currentVer = BuildConfig.VERSION_NAME
+        updateManager.checkForUpdate(currentVer).onSuccess { update ->
+            if (update.isUpdateAvailable) {
+                updateInfo = update
+                showUpdateDialog = true
+            }
+        }
+    }
 
     Column(
         modifier = Modifier
@@ -394,6 +420,109 @@ fun MainScreen() {
                 inactiveTrackColor = NothingCardBorder
             )
         )
+
+        Spacer(modifier = Modifier.height(20.dp))
+
+        // System Updates Section
+        Text(
+            text = "APP UPDATES",
+            color = NothingWhite,
+            fontSize = 12.sp,
+            fontWeight = FontWeight.Bold,
+            fontFamily = FontFamily.Monospace,
+            modifier = Modifier.align(Alignment.Start)
+        )
+
+        Spacer(modifier = Modifier.height(8.dp))
+
+        Card(
+            modifier = Modifier
+                .fillMaxWidth()
+                .border(1.dp, NothingCardBorder, RoundedCornerShape(12.dp)),
+            colors = CardDefaults.cardColors(containerColor = NothingDarkSurface)
+        ) {
+            Column(modifier = Modifier.padding(16.dp)) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(
+                            text = "Version v${BuildConfig.VERSION_NAME}",
+                            color = NothingWhite,
+                            fontSize = 15.sp,
+                            fontWeight = FontWeight.Bold,
+                            fontFamily = FontFamily.Monospace
+                        )
+                        Text(
+                            text = updateCheckStatus ?: "Tap to check latest release on GitHub",
+                            color = NothingGrey,
+                            fontSize = 12.sp
+                        )
+                    }
+
+                    Button(
+                        onClick = {
+                            scope.launch {
+                                isCheckingUpdate = true
+                                updateCheckStatus = "Checking GitHub..."
+                                updateManager.checkForUpdate(BuildConfig.VERSION_NAME)
+                                    .onSuccess { update ->
+                                        isCheckingUpdate = false
+                                        if (update.isUpdateAvailable) {
+                                            updateInfo = update
+                                            showUpdateDialog = true
+                                            updateCheckStatus = "New version ${update.latestVersionName} available!"
+                                        } else {
+                                            updateCheckStatus = "You have the latest version."
+                                        }
+                                    }
+                                    .onFailure { err ->
+                                        isCheckingUpdate = false
+                                        updateCheckStatus = "Failed: ${err.localizedMessage}"
+                                    }
+                            }
+                        },
+                        enabled = !isCheckingUpdate,
+                        colors = ButtonDefaults.buttonColors(containerColor = NothingRed),
+                        shape = RoundedCornerShape(8.dp)
+                    ) {
+                        Text(if (isCheckingUpdate) "..." else "Check", color = NothingWhite, fontSize = 12.sp)
+                    }
+                }
+            }
+        }
+    }
+
+    // Update Dialog
+    updateInfo?.let { update ->
+        if (showUpdateDialog) {
+            NothingUpdateDialog(
+                updateInfo = update,
+                isDownloading = isDownloadingUpdate,
+                downloadProgress = downloadProgress,
+                onConfirmUpdate = {
+                    scope.launch {
+                        isDownloadingUpdate = true
+                        downloadProgress = 0
+                        updateManager.downloadApk(update.apkDownloadUrl) { progress ->
+                            downloadProgress = progress
+                        }.onSuccess { file ->
+                            isDownloadingUpdate = false
+                            showUpdateDialog = false
+                            updateManager.installApk(file)
+                        }.onFailure { err ->
+                            isDownloadingUpdate = false
+                            updateCheckStatus = "Download error: ${err.localizedMessage}"
+                        }
+                    }
+                },
+                onDismiss = {
+                    showUpdateDialog = false
+                }
+            )
+        }
     }
 }
 
