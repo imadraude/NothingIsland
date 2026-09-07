@@ -57,6 +57,7 @@ class IslandApplication : Application() {
         fun applyLiveCutoutDetection(detected: CutoutConfig) {
             val prefs = instance.getSharedPreferences("cutout_prefs", Context.MODE_PRIVATE)
             if (prefs.getBoolean("is_manual_override", false)) return
+            if (com.nothingisland.app.core.cutout.CameraCutoutDetector.getDeviceHardwareConfig(instance) != null) return
             if (_cutoutConfig.value == detected) return
             _cutoutConfig.value = detected
             saveToPrefs(detected, isManual = false)
@@ -72,7 +73,7 @@ class IslandApplication : Application() {
             try {
                 val prefs = instance.getSharedPreferences("cutout_prefs", Context.MODE_PRIVATE)
                 val editor = prefs.edit()
-                    .putBoolean("is_configured_v5", true)
+                    .putBoolean("is_configured_v6", true)
                     .putFloat("top_margin", config.cameraTopMarginDp)
                     .putFloat("diameter", config.cameraDiameterDp)
                     .putFloat("pill_height", config.compactPillHeightDp)
@@ -91,7 +92,7 @@ class IslandApplication : Application() {
         fun loadFromPrefs(): CutoutConfig {
             return try {
                 val prefs = instance.getSharedPreferences("cutout_prefs", Context.MODE_PRIVATE)
-                if (!prefs.contains("is_configured_v5")) {
+                if (!prefs.contains("is_configured_v6")) {
                     val detected = CutoutConfig.detectFromSystem(instance) ?: CutoutConfig()
                     saveToPrefs(detected)
                     return detected
@@ -102,18 +103,18 @@ class IslandApplication : Application() {
                         return detected
                     }
                 }
-                val topMargin = prefs.getFloat("top_margin", 8.5f)
-                val diameter = prefs.getFloat("diameter", 22.3f)
-                val pillHeight = prefs.getFloat("pill_height", 26f)
-                val compactWidth = prefs.getFloat("compact_width", 144f)
+                val topMargin = prefs.getFloat("top_margin", 12.57f)
+                val diameter = prefs.getFloat("diameter", 22.1f)
+                val pillHeight = prefs.getFloat("pill_height", 38f)
+                val compactWidth = prefs.getFloat("compact_width", 150f)
                 val centerX = prefs.getFloat("center_x", 0f)
                 val isAuto = prefs.getBoolean("is_auto_detected", false)
                 CutoutConfig(
                     cameraTopMarginDp = topMargin,
                     cameraDiameterDp = diameter,
                     compactPillHeightDp = pillHeight,
-                    compactMediaWidthDp = 144f,
-                    compactNotifWidthDp = 196f,
+                    compactMediaWidthDp = 150f,
+                    compactNotifWidthDp = 200f,
                     compactBatteryWidthDp = 104f,
                     compactTimerWidthDp = 134f,
                     compactVolumeWidthDp = 114f,

@@ -104,7 +104,7 @@ object CameraCutoutDetector {
         val pillHeightDp = 26f
 
         // Nothing Phone (2a) & Nothing Phone (2a) Plus: Model A142 / Pacman / PacmanPro
-        // Calibrated 8.5dp top margin & 26dp pill height to prevent drooping below camera
+        // Hardware calibrated: 12.57dp cutout top margin & 38dp pill height (dynamicSpot standard with symmetrical 8dp padding)
         val isNothing2a = model.equals("A142", ignoreCase = true) ||
                 model.contains("2a", ignoreCase = true) ||
                 device.contains("Pacman", ignoreCase = true) ||
@@ -113,15 +113,15 @@ object CameraCutoutDetector {
         if (isNothing2a) {
             return CutoutConfig(
                 cameraCenterXOffsetDp = 0f,
-                cameraTopMarginDp = 8.5f,
-                cameraDiameterDp = 22.3f,
-                compactPillHeightDp = 26f,
-                compactMediaWidthDp = 144f,
-                compactNotifWidthDp = 196f,
+                cameraTopMarginDp = 12.57f,
+                cameraDiameterDp = 22.1f,
+                compactPillHeightDp = 38f,
+                compactMediaWidthDp = 150f,
+                compactNotifWidthDp = 200f,
                 compactBatteryWidthDp = 104f,
                 compactTimerWidthDp = 134f,
                 compactVolumeWidthDp = 114f,
-                compactPillWidthDp = 144f,
+                compactPillWidthDp = 150f,
                 expandedCardWidthDp = 340f,
                 expandedCardHeightDp = 190f,
                 isAutoDetected = true
@@ -134,18 +134,18 @@ object CameraCutoutDetector {
                 product.contains("Pong", ignoreCase = true)
 
         if (isNothing2) {
-            val cameraTopMarginDp = ((statusBarHeightDp - 22.3f) / 2f).coerceIn(8f, 13f)
+            val cameraTopMarginDp = ((statusBarHeightDp - 22.3f) / 2f).coerceIn(8f, 15f)
             return CutoutConfig(
                 cameraCenterXOffsetDp = 0f,
                 cameraTopMarginDp = cameraTopMarginDp,
                 cameraDiameterDp = 22.3f,
-                compactPillHeightDp = 26f,
-                compactMediaWidthDp = 144f,
-                compactNotifWidthDp = 196f,
+                compactPillHeightDp = 38f,
+                compactMediaWidthDp = 150f,
+                compactNotifWidthDp = 200f,
                 compactBatteryWidthDp = 104f,
                 compactTimerWidthDp = 134f,
                 compactVolumeWidthDp = 114f,
-                compactPillWidthDp = 144f,
+                compactPillWidthDp = 150f,
                 expandedCardWidthDp = 340f,
                 expandedCardHeightDp = 190f,
                 isAutoDetected = true
@@ -166,13 +166,13 @@ object CameraCutoutDetector {
                 cameraCenterXOffsetDp = cameraCenterXDp - screenCenterXDp,
                 cameraTopMarginDp = 10f,
                 cameraDiameterDp = 28f,
-                compactPillHeightDp = pillHeightDp,
-                compactMediaWidthDp = 144f,
-                compactNotifWidthDp = 196f,
+                compactPillHeightDp = 38f,
+                compactMediaWidthDp = 150f,
+                compactNotifWidthDp = 200f,
                 compactBatteryWidthDp = 104f,
                 compactTimerWidthDp = 134f,
                 compactVolumeWidthDp = 114f,
-                compactPillWidthDp = 144f,
+                compactPillWidthDp = 150f,
                 expandedCardWidthDp = 340f,
                 expandedCardHeightDp = 190f,
                 isAutoDetected = true
@@ -520,15 +520,14 @@ object CameraCutoutDetector {
         val (topPx, diameterPx) = if (top > 0) {
             top to maxOf(rectWidth, rectHeight)
         } else {
-            val estimatedDiameterDp = if (rectWidthDp in 16f..55f) rectWidthDp else 22.3f
-            val diameter = estimatedDiameterDp * density
-            val rectBottomDp = bottom / density
-            val topMarginDp = if (statusBarHeightPx > diameter) {
-                ((statusBarHeightPx - diameter) / (2f * density)).coerceIn(6f, 16f)
+            // dynamicSpot formula: top = bottom - width
+            val estimatedDiameterPx = if (rectWidth > 0 && rectWidthDp in 16f..55f) {
+                rectWidth
             } else {
-                ((rectBottomDp - estimatedDiameterDp) / 2f).coerceIn(6f, 16f)
+                22.1f * density
             }
-            (topMarginDp * density) to diameter
+            val topCalculated = (bottom - estimatedDiameterPx).coerceAtLeast(0f)
+            topCalculated to estimatedDiameterPx
         }
 
         return CutoutRawBounds(
@@ -567,20 +566,21 @@ object CameraCutoutDetector {
         val diameterDp = rawDiameterDp.coerceIn(8f, 100f)
         val topMarginDp = rawTopMarginDp.coerceIn(0f, 100f)
 
-        // Calibrated 26dp aesthetic pill height ensuring balanced padding for icons and typography
-        val pillHeightDp = maxOf(26f, diameterDp)
+        // dynamicSpot standard: symmetrical 8dp padding above and below the camera cutout
+        val verticalPaddingDp = 8f
+        val pillHeightDp = maxOf(34f, diameterDp + (verticalPaddingDp * 2f))
 
         return CutoutConfig(
             cameraCenterXOffsetDp = centerXOffsetDp,
             cameraTopMarginDp = topMarginDp,
             cameraDiameterDp = diameterDp,
             compactPillHeightDp = pillHeightDp,
-            compactMediaWidthDp = 144f,
-            compactNotifWidthDp = 196f,
+            compactMediaWidthDp = 150f,
+            compactNotifWidthDp = 200f,
             compactBatteryWidthDp = 104f,
             compactTimerWidthDp = 134f,
             compactVolumeWidthDp = 114f,
-            compactPillWidthDp = 144f,
+            compactPillWidthDp = 150f,
             expandedCardWidthDp = 340f,
             expandedCardHeightDp = 190f,
             isAutoDetected = true

@@ -114,16 +114,18 @@ class IslandOverlayService : Service() {
 
                 ViewCompat.setOnApplyWindowInsetsListener(this) { _, insetsCompat ->
                     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
-                        insetsCompat.toWindowInsets()?.displayCutout?.let { cutout ->
-                            val (displayWidth, displayHeight) =
-                                CameraCutoutDetector.getFullDisplaySize(this@IslandOverlayService)
-                            CameraCutoutDetector.detectFromCutout(
-                                context = this@IslandOverlayService,
-                                cutout = cutout,
-                                displayWidth = displayWidth,
-                                displayHeight = displayHeight
-                            )?.let { detected ->
-                                IslandApplication.applyLiveCutoutDetection(detected)
+                        if (CameraCutoutDetector.getDeviceHardwareConfig(this@IslandOverlayService) == null) {
+                            insetsCompat.toWindowInsets()?.displayCutout?.let { cutout ->
+                                val (displayWidth, displayHeight) =
+                                    CameraCutoutDetector.getFullDisplaySize(this@IslandOverlayService)
+                                CameraCutoutDetector.detectFromCutout(
+                                    context = this@IslandOverlayService,
+                                    cutout = cutout,
+                                    displayWidth = displayWidth,
+                                    displayHeight = displayHeight
+                                )?.let { detected ->
+                                    IslandApplication.applyLiveCutoutDetection(detected)
+                                }
                             }
                         }
                     }

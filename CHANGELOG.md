@@ -5,6 +5,18 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.2.5] - 2026-09-07
+### Fixed
+- Fixed critical cutout position bug: `IslandOverlayService` and `IslandApplication.applyLiveCutoutDetection` now strictly preserve factory-calibrated hardware profiles, preventing live WindowInsets from overwriting calibrated coordinates with unadjusted raw cutout values.
+- Aligned cutout geometry and pill dimensions with the proven `dynamicSpot` formula:
+  - Top margin of camera cutout: exact `12.57dp` (33px).
+  - Cutout diameter: exact `22.1dp` (58px).
+  - Compact pill height: `38dp` (providing symmetrical `8dp` padding on both top and bottom of the camera punch-hole).
+  - Compact pill top margin: `4.57dp` (12px), eliminating visual drooping and perfectly centering the island around the physical front camera.
+- Implemented `dynamicSpot` cutout top calculation (`top = bottom - width`) in heuristic detection to bypass AOSP `rect.top == 0` expansion issues.
+- Migrated SharedPreferences key to `is_configured_v6` to automatically reload the newly calibrated parameters on existing installations.
+- Expanded calibration slider ranges in Settings (Pill Height 20dp-50dp, Compact Width 100dp-240dp).
+
 ## [0.2.4] - 2026-09-07
 ### Changed
 - Refined compact pill height to a sleek, thin 26dp (reduced from 32dp), hugging the hardware camera cutout with 1.85dp top & bottom clearance.

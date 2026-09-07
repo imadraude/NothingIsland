@@ -26,9 +26,9 @@ class CameraCutoutDetectorTest {
             density = density
         )
 
-        // Estimated top margin: (45 - 28) / 2 = 8.5dp -> 25.5px
+        // dynamicSpot formula: top = bottom - width = 135 - 84 = 51px -> 17dp
         val topMarginDp = bounds.top / density
-        assertEquals(8.5f, topMarginDp, 0.01f)
+        assertEquals(17.0f, topMarginDp, 0.01f)
         assertEquals(28.0f, bounds.width / density, 0.01f)
         assertEquals(540f, bounds.centerX, 0.01f)
     }
@@ -76,8 +76,8 @@ class CameraCutoutDetectorTest {
         assertEquals(0f, config.cameraCenterXOffsetDp, 0.01f)
         assertEquals(9f, config.cameraTopMarginDp, 0.01f)
         assertEquals(28f, config.cameraDiameterDp, 0.01f)
-        // Pill height = maxOf(26f, diameterDp = 28f) -> 28f
-        assertEquals(28f, config.compactPillHeightDp, 0.01f)
+        // Pill height = diameterDp + 16dp = 28dp + 16dp -> 44dp
+        assertEquals(44f, config.compactPillHeightDp, 0.01f)
         assertTrue(config.isAutoDetected)
     }
 
@@ -104,7 +104,7 @@ class CameraCutoutDetectorTest {
         assertEquals(-30f, config.cameraCenterXOffsetDp, 0.01f)
         assertEquals(9f, config.cameraTopMarginDp, 0.01f)
         assertEquals(28f, config.cameraDiameterDp, 0.01f)
-        assertEquals(28f, config.compactPillHeightDp, 0.01f)
+        assertEquals(44f, config.compactPillHeightDp, 0.01f)
     }
 
     @Test
@@ -129,7 +129,7 @@ class CameraCutoutDetectorTest {
 
         // Must snap strictly to 0f to eliminate jitter and misalignment
         assertEquals(0f, config.cameraCenterXOffsetDp, 0.0f)
-        assertEquals(28f, config.compactPillHeightDp, 0.01f)
+        assertEquals(44f, config.compactPillHeightDp, 0.01f)
     }
 
     @Test
@@ -165,22 +165,22 @@ class CameraCutoutDetectorTest {
         val config = CutoutConfig(
             cameraTopMarginDp = 8f,
             cameraDiameterDp = 28f,
-            compactPillHeightDp = 28f
+            compactPillHeightDp = 44f
         )
         // camera center = 8 + 14 = 22dp
-        // pillTopMargin = 22 - 14 = 8dp
+        // pillTopMargin = 22 - 22 = 0dp
         assertEquals(22f, config.cameraCenterYDp, 0.01f)
-        assertEquals(8f, config.pillTopMarginDp, 0.01f)
+        assertEquals(0f, config.pillTopMarginDp, 0.01f)
 
-        // Pill top is at 8dp, camera top is at 8dp -> 0dp bezel above camera
+        // Pill top is at 0dp, camera top is at 8dp -> 8dp bezel above camera
         val topCoverage = config.cameraTopMarginDp - config.pillTopMarginDp
-        assertEquals(0f, topCoverage, 0.01f)
+        assertEquals(8f, topCoverage, 0.01f)
 
-        // Pill bottom is at 8 + 28 = 36dp, camera bottom is at 8 + 28 = 36dp -> 0dp bezel below camera
+        // Pill bottom is at 0 + 44 = 44dp, camera bottom is at 8 + 28 = 36dp -> 8dp bezel below camera
         val pillBottom = config.pillTopMarginDp + config.compactPillHeightDp
         val cameraBottom = config.cameraTopMarginDp + config.cameraDiameterDp
         val bottomCoverage = pillBottom - cameraBottom
-        assertEquals(0f, bottomCoverage, 0.01f)
+        assertEquals(8f, bottomCoverage, 0.01f)
     }
 
     @Test
@@ -193,7 +193,7 @@ class CameraCutoutDetectorTest {
         // Expected offset: 28dp - 180dp = -152dp
         assertEquals(-152f, config.cameraCenterXOffsetDp, 0.01f)
         assertEquals(28f, config.cameraDiameterDp, 0.01f)
-        assertEquals(28f, config.compactPillHeightDp, 0.01f)
+        assertEquals(44f, config.compactPillHeightDp, 0.01f)
     }
 
     @Test
@@ -268,17 +268,19 @@ class CameraCutoutDetectorTest {
         assertEquals(0f, config.cameraCenterXOffsetDp, 0.001f)
         assertEquals(12.57f, config.cameraTopMarginDp, 0.05f)
         assertEquals(22.29f, config.cameraDiameterDp, 0.05f)
-        // Sleek 26dp pill height
-        assertEquals(26f, config.compactPillHeightDp, 0.01f)
+        // dynamicSpot standard pill height: 22.29 + 16 = 38.29dp
+        assertEquals(38.29f, config.compactPillHeightDp, 0.05f)
 
         // Pill center Y = 12.57 + (22.29 / 2) = 23.715dp
-        // Pill top = 23.715 - (26 / 2) = 10.715dp
-        assertEquals(10.715f, config.pillTopMarginDp, 0.05f)
+        // Pill top = 23.715 - (38.29 / 2) = 4.57dp
+        assertEquals(4.57f, config.pillTopMarginDp, 0.05f)
 
-        // Symmetrical padding around camera:
+        // Symmetrical padding around camera: exactly 8dp top and bottom!
         val topPadding = config.cameraTopMarginDp - config.pillTopMarginDp
         val bottomPadding = (config.pillTopMarginDp + config.compactPillHeightDp) -
                 (config.cameraTopMarginDp + config.cameraDiameterDp)
         assertEquals(topPadding, bottomPadding, 0.05f)
+        assertEquals(8.0f, topPadding, 0.05f)
+        assertEquals(8.0f, bottomPadding, 0.05f)
     }
 }
