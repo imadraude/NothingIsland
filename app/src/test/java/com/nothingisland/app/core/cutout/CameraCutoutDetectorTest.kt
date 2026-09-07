@@ -1,5 +1,6 @@
 package com.nothingisland.app.core.cutout
 
+import com.nothingisland.app.model.CutoutConfig
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
