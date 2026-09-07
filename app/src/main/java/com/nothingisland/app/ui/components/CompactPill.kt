@@ -35,6 +35,7 @@ import androidx.compose.ui.unit.sp
 import com.nothingisland.app.model.CutoutConfig
 import com.nothingisland.app.model.IslandState
 import com.nothingisland.app.ui.theme.NothingBlack
+import com.nothingisland.app.ui.theme.NothingDarkSurface
 import com.nothingisland.app.ui.theme.NothingGrey
 import com.nothingisland.app.ui.theme.NothingRed
 import com.nothingisland.app.ui.theme.NothingWhite

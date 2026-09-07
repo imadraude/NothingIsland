@@ -32,7 +32,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.unit.dp
 import com.nothingisland.app.core.IslandStateManager
 import com.nothingisland.app.model.CutoutConfig
@@ -46,7 +48,7 @@ import kotlin.math.abs
  * Root Composable for Nothing Phone (2a) Dynamic Island.
  * Implements Apple Fluid Motion via Jetpack Compose unified Transition and Spring physics,
  * 1:1 direct manipulation gesture tracking with rubber-banding,
- * and Nothing OS industrial aesthetics.
+ * native Nothing OS tactile haptics, and industrial aesthetics.
  */
 @Composable
 fun NothingIslandRoot(
@@ -57,6 +59,7 @@ fun NothingIslandRoot(
 ) {
     val state by stateManager.state.collectAsState()
     val scope = rememberCoroutineScope()
+    val haptic = LocalHapticFeedback.current
 
     // Unified coordinated transition — all dimensions animate together without desynchronization
     val transition = updateTransition(targetState = state, label = "IslandMotionTransition")
@@ -183,7 +186,10 @@ fun NothingIslandRoot(
             .pointerInput(state) {
                 detectTapGestures(
                     onTap = { stateManager.onPillClicked() },
-                    onLongPress = { stateManager.onPillLongClicked() }
+                    onLongPress = {
+                        haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                        stateManager.onPillLongClicked()
+                    }
                 )
             }
             .pointerInput(state) {
@@ -211,13 +217,16 @@ fun NothingIslandRoot(
                         when (state) {
                             is IslandState.Compact -> {
                                 if (finalY > 36f) {
+                                    haptic.performHapticFeedback(HapticFeedbackType.LongPress)
                                     stateManager.expand()
                                 } else if (abs(finalX) > 65f) {
+                                    haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
                                     stateManager.onDismissSwiped()
                                 }
                             }
                             is IslandState.Expanded -> {
                                 if (finalY < -40f) {
+                                    haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
                                     stateManager.collapse()
                                 }
                             }

@@ -45,7 +45,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -167,6 +169,7 @@ private fun MediaExpandedBody(
     stateManager: IslandStateManager
 ) {
     val media = state.media
+    val haptic = LocalHapticFeedback.current
 
     Column(
         modifier = Modifier.fillMaxWidth(),
@@ -251,6 +254,7 @@ private fun MediaExpandedBody(
                         scrubPos = frac * media.durationMs
                     },
                     onValueChangeFinished = {
+                        haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
                         stateManager.seekMedia(scrubPos.toLong())
                         isScrubbing = false
                     },
@@ -292,7 +296,10 @@ private fun MediaExpandedBody(
             verticalAlignment = Alignment.CenterVertically
         ) {
             IconButton(
-                onClick = { stateManager.skipPrevious() },
+                onClick = {
+                    haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                    stateManager.skipPrevious()
+                },
                 modifier = Modifier.size(36.dp)
             ) {
                 Icon(
@@ -312,6 +319,7 @@ private fun MediaExpandedBody(
             ) {
                 IconButton(
                     onClick = {
+                        haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
                         if (media.isPlaying) stateManager.pauseMedia() else stateManager.playMedia()
                     },
                     modifier = Modifier.size(42.dp)
@@ -326,7 +334,10 @@ private fun MediaExpandedBody(
             }
 
             IconButton(
-                onClick = { stateManager.skipNext() },
+                onClick = {
+                    haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                    stateManager.skipNext()
+                },
                 modifier = Modifier.size(36.dp)
             ) {
                 Icon(
