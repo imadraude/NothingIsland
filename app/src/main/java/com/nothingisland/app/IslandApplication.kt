@@ -54,6 +54,14 @@ class IslandApplication : Application() {
             return detected
         }
 
+        fun applyLiveCutoutDetection(detected: CutoutConfig) {
+            val prefs = instance.getSharedPreferences("cutout_prefs", Context.MODE_PRIVATE)
+            if (prefs.getBoolean("is_manual_override", false)) return
+            if (_cutoutConfig.value == detected) return
+            _cutoutConfig.value = detected
+            saveToPrefs(detected, isManual = false)
+        }
+
         fun saveManualConfig(config: CutoutConfig) {
             val manualConfig = config.copy(isAutoDetected = false)
             _cutoutConfig.value = manualConfig
@@ -87,6 +95,12 @@ class IslandApplication : Application() {
                     val detected = CutoutConfig.detectFromSystem(instance) ?: CutoutConfig()
                     saveToPrefs(detected)
                     return detected
+                }
+                if (!prefs.getBoolean("is_manual_override", false)) {
+                    CutoutConfig.detectFromSystem(instance)?.let { detected ->
+                        saveToPrefs(detected, isManual = false)
+                        return detected
+                    }
                 }
                 val topMargin = prefs.getFloat("top_margin", 8f)
                 val diameter = prefs.getFloat("diameter", 28f)

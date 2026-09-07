@@ -133,6 +133,34 @@ class CameraCutoutDetectorTest {
     }
 
     @Test
+    fun chooseDetectionResult_prefersLiveWindowGeometry() {
+        val live = CutoutConfig(cameraTopMarginDp = 7f, cameraDiameterDp = 31f)
+        val profile = CutoutConfig(cameraTopMarginDp = 9f, cameraDiameterDp = 28f)
+        val resource = CutoutConfig(cameraTopMarginDp = 8f, cameraDiameterDp = 30f)
+
+        assertEquals(live, CameraCutoutDetector.chooseDetectionResult(live, profile, resource))
+        assertEquals(resource, CameraCutoutDetector.chooseDetectionResult(null, profile, resource))
+        assertEquals(profile, CameraCutoutDetector.chooseDetectionResult(null, profile, null))
+    }
+
+    @Test
+    fun buildConfigFromRawBounds_preservesNonNothingPunchHoleSizes() {
+        val small = CameraCutoutDetector.buildConfigFromRawBounds(
+            CutoutRawBounds(left = 513f, top = 12f, right = 567f, bottom = 66f),
+            displayWidth = 1080,
+            density = 3f
+        )
+        val large = CameraCutoutDetector.buildConfigFromRawBounds(
+            CutoutRawBounds(left = 477f, top = 18f, right = 603f, bottom = 144f),
+            displayWidth = 1080,
+            density = 3f
+        )
+
+        assertEquals(18f, small.cameraDiameterDp, 0.01f)
+        assertEquals(42f, large.cameraDiameterDp, 0.01f)
+    }
+
+    @Test
     fun cutoutConfig_pillTopMargin_ensuresCompleteCameraCoverage() {
         val config = CutoutConfig(
             cameraTopMarginDp = 8f,

@@ -19,12 +19,14 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.ComposeView
 import androidx.compose.ui.platform.ViewCompositionStrategy
+import androidx.core.view.ViewCompat
 import androidx.core.app.NotificationCompat
 import androidx.lifecycle.setViewTreeLifecycleOwner
 import androidx.lifecycle.setViewTreeViewModelStoreOwner
 import androidx.savedstate.setViewTreeSavedStateRegistryOwner
 import com.nothingisland.app.IslandApplication
 import com.nothingisland.app.R
+import com.nothingisland.app.core.cutout.CameraCutoutDetector
 import com.nothingisland.app.model.IslandState
 import com.nothingisland.app.ui.MainActivity
 import com.nothingisland.app.ui.components.NothingIslandRoot
@@ -80,6 +82,24 @@ class IslandOverlayService : Service() {
             setViewTreeSavedStateRegistryOwner(serviceLifecycleOwner)
             setViewTreeViewModelStoreOwner(serviceLifecycleOwner)
 
+            ViewCompat.setOnApplyWindowInsetsListener(this) { _, insetsCompat ->
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+                    insetsCompat.toWindowInsets()?.displayCutout?.let { cutout ->
+                        val (displayWidth, displayHeight) =
+                            CameraCutoutDetector.getFullDisplaySize(this@IslandOverlayService)
+                        CameraCutoutDetector.detectFromCutout(
+                            context = this@IslandOverlayService,
+                            cutout = cutout,
+                            displayWidth = displayWidth,
+                            displayHeight = displayHeight
+                        )?.let { detected ->
+                            IslandApplication.applyLiveCutoutDetection(detected)
+                        }
+                    }
+                }
+                insetsCompat
+            }
+
             setContent {
                 val config by IslandApplication.cutoutConfigFlow.collectAsState()
                 NothingIslandTheme {
@@ -98,6 +118,7 @@ class IslandOverlayService : Service() {
 
         val initialParams = createLayoutParams(IslandState.Idle)
         windowManager.addView(composeView, initialParams)
+        composeView?.let(ViewCompat::requestApplyInsets)
     }
 
     private fun observeState() {
@@ -110,6 +131,7 @@ class IslandOverlayService : Service() {
                     val updatedParams = createLayoutParams(state)
                     try {
                         windowManager.updateViewLayout(view, updatedParams)
+                        ViewCompat.requestApplyInsets(view)
                     } catch (e: Exception) {
                         e.printStackTrace()
                     }
@@ -196,6 +218,7 @@ class IslandOverlayService : Service() {
             val state = IslandApplication.stateManager.state.value
             try {
                 windowManager.updateViewLayout(view, createLayoutParams(state))
+                ViewCompat.requestApplyInsets(view)
             } catch (e: Exception) {
                 e.printStackTrace()
             }

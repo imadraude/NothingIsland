@@ -5,6 +5,17 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.2.0] - 2026-09-07
+### Changed
+- Reworked camera cutout detection to prioritize live geometry from the attached overlay window over device-specific profiles.
+- Normalized cutout coordinates against the full physical display and refreshed detection after overlay layout and configuration changes.
+- Expanded supported punch-hole sizes beyond the previous Nothing-specific 22-36dp range.
+
+### Fixed
+- Prevented stale automatically detected geometry from being reused indefinitely across launches.
+- Preserved manual calibration when live window insets arrive.
+- Fixed the overlay listener using its own narrow window width instead of the full display width.
+
 ## [0.1.9] - 2026-09-07
 ### Fixed
 - Fixed camera cutout peek issue on Nothing Phone (2a): Increased resting pill height to 40dp (with dynamic status bar height adaptation) to provide 6dp of solid black OLED coverage above and below the 28dp camera cutout.

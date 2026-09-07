@@ -9,6 +9,7 @@ import android.graphics.Path
 import android.graphics.Rect
 import android.graphics.RectF
 import android.os.Build
+import android.util.DisplayMetrics
 import android.view.DisplayCutout
 import android.view.WindowInsets
 import android.view.WindowManager
@@ -39,6 +40,12 @@ data class CutoutRawBounds(
  * AOSP SVG parser (API 28-30), and dead-center snapping to prevent side-to-side jumping.
  */
 object CameraCutoutDetector {
+
+    internal fun chooseDetectionResult(
+        liveWindowResult: CutoutConfig?,
+        hardwareFallback: CutoutConfig?,
+        systemResourceFallback: CutoutConfig?
+    ): CutoutConfig? = liveWindowResult ?: systemResourceFallback ?: hardwareFallback
 
     /**
      * Resolves the exact status bar height in DP via WindowInsets or AOSP resource dimension.
@@ -235,23 +242,21 @@ object CameraCutoutDetector {
      * Detection from Context (Activity, Service or Application).
      */
     fun detectFromContext(context: Context): CutoutConfig? {
-        // 1. Check known hardware profiles first (exact physical calibration for Nothing Phone models)
-        getDeviceHardwareConfig(context)?.let { return it }
-
         val dm = context.resources.displayMetrics
+        var liveResult: CutoutConfig? = null
 
-        // 2. Try getting cutout from Activity Window decorView if available
+        // Live data from a real window is authoritative. Profiles only fill gaps left by OEMs.
         if (context is Activity) {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
                 val cutout = context.window?.decorView?.rootWindowInsets?.displayCutout
                 if (cutout != null) {
-                    return detectFromCutout(context, cutout, dm.widthPixels, dm.heightPixels)
+                    val (width, height) = getFullDisplaySize(context)
+                    liveResult = detectFromCutout(context, cutout, width, height)
                 }
             }
         }
 
-        // 3. WindowManager currentWindowMetrics (API 30+)
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+        if (liveResult == null && Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
             try {
                 val wm = context.getSystemService(Context.WINDOW_SERVICE) as? WindowManager
                 if (wm != null) {
@@ -259,7 +264,7 @@ object CameraCutoutDetector {
                     val cutout = metrics.windowInsets.displayCutout
                     val bounds = metrics.bounds
                     if (cutout != null) {
-                        return detectFromCutout(context, cutout, bounds.width(), bounds.height())
+                        liveResult = detectFromCutout(context, cutout, bounds.width(), bounds.height())
                     }
                 }
             } catch (e: Exception) {
@@ -267,9 +272,26 @@ object CameraCutoutDetector {
             }
         }
 
-        // 4. AOSP built-in cutout SVG fallback
         val svgBounds = parseBuiltInDisplayCutoutSvg(dm.widthPixels, dm.heightPixels, dm.density)
-        return svgBounds?.let { buildConfigFromRawBounds(it, dm.widthPixels, dm.density) }
+        val svgResult = svgBounds?.let { buildConfigFromRawBounds(it, dm.widthPixels, dm.density) }
+        return chooseDetectionResult(liveResult, getDeviceHardwareConfig(context), svgResult)
+    }
+
+    fun getFullDisplaySize(context: Context): Pair<Int, Int> {
+        val wm = context.getSystemService(Context.WINDOW_SERVICE) as? WindowManager
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R && wm != null) {
+            val bounds = wm.maximumWindowMetrics.bounds
+            return bounds.width() to bounds.height()
+        }
+
+        @Suppress("DEPRECATION")
+        return if (wm != null) {
+            val metrics = DisplayMetrics()
+            wm.defaultDisplay.getRealMetrics(metrics)
+            metrics.widthPixels to metrics.heightPixels
+        } else {
+            context.resources.displayMetrics.let { it.widthPixels to it.heightPixels }
+        }
     }
 
     @RequiresApi(Build.VERSION_CODES.S)
@@ -435,11 +457,10 @@ object CameraCutoutDetector {
             rawOffsetDp
         }
 
-        val diameterDp = rawDiameterDp.coerceIn(22f, 36f)
-        val topMarginDp = rawTopMarginDp.coerceIn(6f, 18f)
+        val diameterDp = rawDiameterDp.coerceIn(8f, 100f)
+        val topMarginDp = rawTopMarginDp.coerceIn(0f, 100f)
 
-        // Resting pill height: diameter + 12dp for generous OLED coverage, clamp to 38..46dp
-        val pillHeightDp = (diameterDp + 12f).coerceIn(38f, 46f)
+        val pillHeightDp = (diameterDp + 12f).coerceAtLeast(32f)
 
         return CutoutConfig(
             cameraCenterXOffsetDp = centerXOffsetDp,
