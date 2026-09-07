@@ -5,6 +5,7 @@ import android.app.PendingIntent
 import android.app.Service
 import android.content.Context
 import android.content.Intent
+import android.content.res.Configuration
 import android.graphics.PixelFormat
 import android.os.Build
 import android.os.IBinder
@@ -24,6 +25,7 @@ import androidx.lifecycle.setViewTreeViewModelStoreOwner
 import androidx.savedstate.setViewTreeSavedStateRegistryOwner
 import com.nothingisland.app.IslandApplication
 import com.nothingisland.app.R
+import com.nothingisland.app.core.cutout.CameraCutoutDetector
 import com.nothingisland.app.model.IslandState
 import com.nothingisland.app.ui.MainActivity
 import com.nothingisland.app.ui.components.NothingIslandRoot
@@ -78,6 +80,27 @@ class IslandOverlayService : Service() {
             setViewTreeLifecycleOwner(serviceLifecycleOwner)
             setViewTreeSavedStateRegistryOwner(serviceLifecycleOwner)
             setViewTreeViewModelStoreOwner(serviceLifecycleOwner)
+
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+                setOnApplyWindowInsetsListener { view, insets ->
+                    val cutout = insets.displayCutout
+                    if (cutout != null) {
+                        val dm = resources.displayMetrics
+                        val w = view.width.takeIf { it > 0 } ?: dm.widthPixels
+                        val h = view.height.takeIf { it > 0 } ?: dm.heightPixels
+                        CameraCutoutDetector.detectFromCutout(
+                            context = this@IslandOverlayService,
+                            cutout = cutout,
+                            displayWidth = w,
+                            displayHeight = h
+                        )?.let { detected ->
+                            IslandApplication.onCutoutAutoDetected(detected)
+                        }
+                    }
+                    insets
+                }
+            }
+
             setContent {
                 val config by IslandApplication.cutoutConfigFlow.collectAsState()
                 NothingIslandTheme {
@@ -96,6 +119,7 @@ class IslandOverlayService : Service() {
 
         val initialParams = createLayoutParams(IslandState.Idle)
         windowManager.addView(composeView, initialParams)
+        composeView?.requestApplyInsets()
     }
 
     private fun observeState() {
@@ -117,6 +141,24 @@ class IslandOverlayService : Service() {
     }
 
     private fun createLayoutParams(state: IslandState): WindowManager.LayoutParams {
+        val isLandscape = resources.configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
+        if (isLandscape) {
+            // In landscape, hide overlay to avoid obstructing apps/media
+            return WindowManager.LayoutParams(
+                1, 1,
+                WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY,
+                WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or
+                        WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE or
+                        WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN or
+                        WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS,
+                PixelFormat.TRANSLUCENT
+            ).apply {
+                gravity = Gravity.TOP or Gravity.CENTER_HORIZONTAL
+                x = 0
+                y = 0
+            }
+        }
+
         val config = IslandApplication.cutoutConfig
         val density = resources.displayMetrics.density
 
@@ -162,8 +204,23 @@ class IslandOverlayService : Service() {
             gravity = Gravity.TOP or Gravity.CENTER_HORIZONTAL
             x = 0
             y = 0
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
                 layoutInDisplayCutoutMode = WindowManager.LayoutParams.LAYOUT_IN_DISPLAY_CUTOUT_MODE_ALWAYS
+            } else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+                layoutInDisplayCutoutMode = WindowManager.LayoutParams.LAYOUT_IN_DISPLAY_CUTOUT_MODE_SHORT_EDGES
+            }
+        }
+    }
+
+    override fun onConfigurationChanged(newConfig: Configuration) {
+        super.onConfigurationChanged(newConfig)
+        composeView?.let { view ->
+            val state = IslandApplication.stateManager.state.value
+            try {
+                windowManager.updateViewLayout(view, createLayoutParams(state))
+                view.requestApplyInsets()
+            } catch (e: Exception) {
+                e.printStackTrace()
             }
         }
     }

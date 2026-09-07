@@ -124,8 +124,24 @@ fun MainScreen() {
         expandedCardHeightDp = 190f,
         isAutoDetected = isAutoDetected
     )
+
+    val currentAppConfig by IslandApplication.cutoutConfigFlow.collectAsState()
+    LaunchedEffect(currentAppConfig) {
+        if (currentAppConfig.isAutoDetected && isAutoDetected) {
+            topMargin = currentAppConfig.cameraTopMarginDp
+            centerXOffset = currentAppConfig.cameraCenterXOffsetDp
+            pillHeight = currentAppConfig.compactPillHeightDp
+            cameraDiameter = currentAppConfig.cameraDiameterDp
+            compactWidth = currentAppConfig.compactPillWidthDp
+        }
+    }
+
     LaunchedEffect(liveConfig) {
-        IslandApplication.cutoutConfig = liveConfig
+        if (!isAutoDetected) {
+            IslandApplication.saveManualConfig(liveConfig)
+        } else {
+            IslandApplication.cutoutConfig = liveConfig
+        }
     }
 
     val scope = rememberCoroutineScope()
@@ -390,7 +406,7 @@ fun MainScreen() {
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 OutlinedButton(
                     onClick = {
-                        val detected = IslandApplication.autoDetectAndApply()
+                        val detected = IslandApplication.autoDetectAndApply(context)
                         if (detected != null) {
                             topMargin = detected.cameraTopMarginDp
                             centerXOffset = detected.cameraCenterXOffsetDp

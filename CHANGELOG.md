@@ -7,10 +7,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-## [0.1.6] - 2026-09-07
+## [0.1.7] - 2026-09-07
 ### Added
-- Hardware punch-hole camera auto-detection from Android `DisplayCutout` (`CutoutConfig.detectFromSystem`).
-- "Auto-Detect" button and status badge in Calibration settings.
+- Multi-tier high-precision camera cutout detection system `CameraCutoutDetector`:
+  - **Android 12+ (API 31+)**: Exact subpixel vector contour extraction via `DisplayCutout.cutoutPath` and `Path.Op.INTERSECT`.
+  - **Android 9-11 (API 28-30)**: AOSP hardware SVG specification parsing (`config_mainBuiltInDisplayCutout`) via `PathParser`.
+  - **Intelligent Heuristic Fallback**: Solves AOSP's artificial `rect.top == 0` expansion by centering the punch-hole in status bar bounds.
+- Window lifecycle insets listener in `IslandOverlayService` (`setOnApplyWindowInsetsListener`) ensuring live hardware insets after attach.
+- Auto-hide Dynamic Island in Landscape orientation to prevent obstruction during media and gaming.
+- Comprehensive technical research document in `docs/research/camera_cutout_detection.md`.
+- Unit test suite `CameraCutoutDetectorTest` validating bounds calculations and conversion.
+
+### Fixed
+- Fixed critical compatibility bug where `LAYOUT_IN_DISPLAY_CUTOUT_MODE_ALWAYS` was used on API 28-29 (now safely falls back to `LAYOUT_IN_DISPLAY_CUTOUT_MODE_SHORT_EDGES`).
+- Fixed application context insets query returning `null` or distorted coordinates.
+- Preserved user manual calibration overrides when live system insets arrive.
 
 ### Changed
 - Refined default pill and expanded card dimensions to be much sleeker and proportional to physical Nothing Phone (2a) camera:

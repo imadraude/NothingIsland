@@ -28,23 +28,55 @@ class IslandApplication : Application() {
                 saveToPrefs(value)
             }
 
-        fun resetToDefaults() {
-            val defaults = CutoutConfig.detectFromSystem(instance) ?: CutoutConfig()
-            _cutoutConfig.value = defaults
-            saveToPrefs(defaults)
+        fun onCutoutAutoDetected(detected: CutoutConfig) {
+            try {
+                val prefs = instance.getSharedPreferences("cutout_prefs", Context.MODE_PRIVATE)
+                val isManual = prefs.getBoolean("is_manual_override", false)
+                if (!isManual) {
+                    _cutoutConfig.value = detected
+                    saveToPrefs(detected, isManual = false)
+                }
+            } catch (e: Exception) {
+                e.printStackTrace()
+            }
         }
 
-        fun autoDetectAndApply(): CutoutConfig? {
-            val detected = CutoutConfig.detectFromSystem(instance) ?: return null
+        fun resetToDefaults() {
+            try {
+                val prefs = instance.getSharedPreferences("cutout_prefs", Context.MODE_PRIVATE)
+                prefs.edit().putBoolean("is_manual_override", false).apply()
+            } catch (e: Exception) {
+                e.printStackTrace()
+            }
+            val defaults = CutoutConfig.detectFromSystem(instance) ?: CutoutConfig()
+            _cutoutConfig.value = defaults
+            saveToPrefs(defaults, isManual = false)
+        }
+
+        fun autoDetectAndApply(context: Context? = null): CutoutConfig? {
+            try {
+                val prefs = instance.getSharedPreferences("cutout_prefs", Context.MODE_PRIVATE)
+                prefs.edit().putBoolean("is_manual_override", false).apply()
+            } catch (e: Exception) {
+                e.printStackTrace()
+            }
+            val targetContext = context ?: instance
+            val detected = CutoutConfig.detectFromSystem(targetContext) ?: return null
             _cutoutConfig.value = detected
-            saveToPrefs(detected)
+            saveToPrefs(detected, isManual = false)
             return detected
         }
 
-        private fun saveToPrefs(config: CutoutConfig) {
+        fun saveManualConfig(config: CutoutConfig) {
+            val manualConfig = config.copy(isAutoDetected = false)
+            _cutoutConfig.value = manualConfig
+            saveToPrefs(manualConfig, isManual = true)
+        }
+
+        private fun saveToPrefs(config: CutoutConfig, isManual: Boolean? = null) {
             try {
                 val prefs = instance.getSharedPreferences("cutout_prefs", Context.MODE_PRIVATE)
-                prefs.edit()
+                val editor = prefs.edit()
                     .putBoolean("is_configured_v2", true)
                     .putFloat("top_margin", config.cameraTopMarginDp)
                     .putFloat("diameter", config.cameraDiameterDp)
@@ -52,7 +84,10 @@ class IslandApplication : Application() {
                     .putFloat("compact_width", config.compactPillWidthDp)
                     .putFloat("center_x", config.cameraCenterXOffsetDp)
                     .putBoolean("is_auto_detected", config.isAutoDetected)
-                    .apply()
+                if (isManual != null) {
+                    editor.putBoolean("is_manual_override", isManual)
+                }
+                editor.apply()
             } catch (e: Exception) {
                 e.printStackTrace()
             }

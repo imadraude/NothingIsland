@@ -1,8 +1,7 @@
 package com.nothingisland.app.model
 
 import android.content.Context
-import android.os.Build
-import android.view.WindowManager
+import com.nothingisland.app.core.cutout.CameraCutoutDetector
 
 /**
  * Calibrated dimensions for Nothing Phone (2a) centered punch-hole camera.
@@ -30,54 +29,10 @@ data class CutoutConfig(
 
     companion object {
         /**
-         * Automatically detects the exact physical punch-hole dimensions from Android WindowMetrics.
+         * Automatically detects the exact physical punch-hole dimensions from system Window / Insets / AOSP config.
          */
         fun detectFromSystem(context: Context): CutoutConfig? {
-            if (Build.VERSION.SDK_INT < Build.VERSION_CODES.R) return null
-            return try {
-                val windowManager = context.getSystemService(Context.WINDOW_SERVICE) as? WindowManager ?: return null
-                val metrics = windowManager.currentWindowMetrics
-                val insets = metrics.windowInsets
-                val cutout = insets.displayCutout ?: return null
-                val rect = cutout.boundingRectTop
-                if (rect.isEmpty) return null
-
-                val density = context.resources.displayMetrics.density
-                val screenWidthPx = metrics.bounds.width()
-
-                // A punch hole is a circular cutout where width == physical diameter.
-                // In Android, rect.top may be 0 if the OEM spans the cutout from screen top edge.
-                val diameterPx = rect.width().toFloat()
-                val bottomPx = rect.bottom.toFloat()
-                val topPx = if (rect.top > 0) rect.top.toFloat() else (bottomPx - diameterPx)
-                val centerXPx = rect.centerX().toFloat()
-                val screenCenterXPx = screenWidthPx / 2f
-
-                val diameterDp = diameterPx / density
-                val topMarginDp = topPx / density
-                val centerXOffsetDp = (centerXPx - screenCenterXPx) / density
-
-                // Pill height is camera diameter + 6dp for 3dp top/bottom OLED margins
-                val pillHeightDp = (diameterDp + 6f).coerceAtLeast(32f)
-
-                CutoutConfig(
-                    cameraCenterXOffsetDp = centerXOffsetDp,
-                    cameraTopMarginDp = topMarginDp,
-                    cameraDiameterDp = diameterDp,
-                    compactPillHeightDp = pillHeightDp,
-                    compactMediaWidthDp = 136f,
-                    compactNotifWidthDp = 190f,
-                    compactBatteryWidthDp = 100f,
-                    compactTimerWidthDp = 130f,
-                    compactVolumeWidthDp = 110f,
-                    compactPillWidthDp = 136f,
-                    expandedCardWidthDp = 340f,
-                    expandedCardHeightDp = 190f,
-                    isAutoDetected = true
-                )
-            } catch (e: Exception) {
-                null
-            }
+            return CameraCutoutDetector.detectFromContext(context)
         }
     }
 }
