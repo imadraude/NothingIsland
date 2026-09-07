@@ -116,18 +116,21 @@ fun NothingIslandRoot(
         morphState is IslandState.Compact.Volume -> config.compactVolumeWidthDp.dp
         morphState is IslandState.Compact -> config.compactPillWidthDp.dp
         morphState is IslandState.Expanded -> config.expandedCardWidthDp.dp
+        else -> config.cameraDiameterDp.dp
     }
 
     val targetHeight = when {
         isSqueezing || morphState is IslandState.Idle -> config.cameraDiameterDp.dp
         morphState is IslandState.Compact -> config.compactPillHeightDp.dp
         morphState is IslandState.Expanded -> config.expandedCardHeightDp.dp
+        else -> config.cameraDiameterDp.dp
     }
 
     val targetCornerRadius = when {
         isSqueezing || morphState is IslandState.Idle -> (config.cameraDiameterDp / 2f).dp
         morphState is IslandState.Compact -> (config.compactPillHeightDp / 2f).dp
         morphState is IslandState.Expanded -> 28.dp
+        else -> (config.cameraDiameterDp / 2f).dp
     }
 
     val targetTopMargin = when {
@@ -377,11 +380,11 @@ private fun isSameContext(a: IslandState, b: IslandState): Boolean {
         a is IslandState.Compact.Battery && b is IslandState.Compact.Battery -> true
         a is IslandState.Compact.Volume && b is IslandState.Compact.Volume -> true
         a is IslandState.Compact.Timer && b is IslandState.Compact.Timer -> true
-        a is IslandState.Compact.Notification && b is IslandState.Compact.Notification -> a.notification.id == b.notification.id
+        a is IslandState.Compact.Notification && b is IslandState.Compact.Notification -> a.notification.key == b.notification.key
         a is IslandState.Expanded.Media && b is IslandState.Expanded.Media -> true
         a is IslandState.Expanded.Battery && b is IslandState.Expanded.Battery -> true
         a is IslandState.Expanded.Timer && b is IslandState.Expanded.Timer -> true
-        a is IslandState.Expanded.Notification && b is IslandState.Expanded.Notification -> a.notification.id == b.notification.id
+        a is IslandState.Expanded.Notification && b is IslandState.Expanded.Notification -> a.notification.key == b.notification.key
         a is IslandState.Idle && b is IslandState.Idle -> true
         else -> false
     }
