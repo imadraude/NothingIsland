@@ -1,6 +1,7 @@
 package com.nothingisland.app.ui.components
 
 import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.SizeTransform
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.animateDp
@@ -77,12 +78,20 @@ fun NothingIslandRoot(
                     dampingRatio = 1.0f,
                     stiffness = Spring.StiffnessMedium
                 )
+                initialState is IslandState.Compact && targetState is IslandState.Compact -> spring(
+                    dampingRatio = 1.0f, // Critically damped: zero overshoot/wobble between compact states
+                    stiffness = Spring.StiffnessMediumLow // Silky-smooth glide
+                )
                 targetState is IslandState.Expanded -> spring(
-                    dampingRatio = 0.82f,
+                    dampingRatio = 0.82f, // Gentle natural pop for expanded card
+                    stiffness = Spring.StiffnessMedium
+                )
+                initialState is IslandState.Expanded && targetState is IslandState.Compact -> spring(
+                    dampingRatio = 0.95f, // Crisp return from card to pill
                     stiffness = Spring.StiffnessMedium
                 )
                 else -> spring(
-                    dampingRatio = 0.86f,
+                    dampingRatio = 1.0f,
                     stiffness = Spring.StiffnessMedium
                 )
             }
@@ -112,8 +121,12 @@ fun NothingIslandRoot(
                     dampingRatio = 0.82f,
                     stiffness = Spring.StiffnessMedium
                 )
+                initialState is IslandState.Expanded && targetState is IslandState.Compact -> spring(
+                    dampingRatio = 0.95f,
+                    stiffness = Spring.StiffnessMedium
+                )
                 else -> spring(
-                    dampingRatio = 0.86f,
+                    dampingRatio = 1.0f,
                     stiffness = Spring.StiffnessMedium
                 )
             }
@@ -144,7 +157,8 @@ fun NothingIslandRoot(
             when {
                 targetState is IslandState.Idle -> spring(dampingRatio = 1.0f, stiffness = Spring.StiffnessMedium)
                 targetState is IslandState.Expanded -> spring(dampingRatio = 0.85f, stiffness = Spring.StiffnessMedium)
-                else -> spring(dampingRatio = 0.90f, stiffness = Spring.StiffnessMedium)
+                initialState is IslandState.Expanded && targetState is IslandState.Compact -> spring(dampingRatio = 0.95f, stiffness = Spring.StiffnessMedium)
+                else -> spring(dampingRatio = 1.0f, stiffness = Spring.StiffnessMedium)
             }
         },
         label = "IslandCornerRadius"
@@ -254,11 +268,61 @@ fun NothingIslandRoot(
     ) {
         AnimatedContent(
             targetState = state,
+            modifier = Modifier.fillMaxSize(),
+            contentKey = { targetState ->
+                when (targetState) {
+                    is IslandState.Idle -> "idle"
+                    is IslandState.Compact.Media -> "compact_media"
+                    is IslandState.Compact.Notification -> "compact_notif"
+                    is IslandState.Compact.Battery -> "compact_battery"
+                    is IslandState.Compact.Volume -> "compact_volume"
+                    is IslandState.Compact.Timer -> "compact_timer"
+                    is IslandState.Expanded.Media -> "expanded_media"
+                    is IslandState.Expanded.Notification -> "expanded_notif"
+                    is IslandState.Expanded.Battery -> "expanded_battery"
+                    is IslandState.Expanded.Timer -> "expanded_timer"
+                }
+            },
             transitionSpec = {
-                (fadeIn(animationSpec = spring(stiffness = Spring.StiffnessMedium)) +
-                 scaleIn(initialScale = 0.92f, animationSpec = spring(stiffness = Spring.StiffnessMedium))) togetherWith
-                (fadeOut(animationSpec = spring(stiffness = Spring.StiffnessHigh)) +
-                 scaleOut(targetScale = 0.92f, animationSpec = spring(stiffness = Spring.StiffnessHigh)))
+                val isIntraCompact = initialState is IslandState.Compact && targetState is IslandState.Compact
+                val isToExpanded = targetState is IslandState.Expanded
+                val isFromExpanded = initialState is IslandState.Expanded
+
+                when {
+                    isIntraCompact -> {
+                        // Intra-compact transitions: pure crossfade without scale jitter or size clashes
+                        (fadeIn(animationSpec = androidx.compose.animation.core.tween(durationMillis = 140, delayMillis = 30)) togetherWith
+                         fadeOut(animationSpec = androidx.compose.animation.core.tween(durationMillis = 90))).using(
+                            SizeTransform(clip = false) { _, _ -> null }
+                        )
+                    }
+                    isToExpanded -> {
+                        // Expanding: smooth fade with gentle scale-up
+                        (fadeIn(animationSpec = androidx.compose.animation.core.tween(durationMillis = 180, delayMillis = 40)) +
+                         scaleIn(initialScale = 0.94f, animationSpec = spring(dampingRatio = 0.85f, stiffness = Spring.StiffnessMedium))) togetherWith
+                        (fadeOut(animationSpec = androidx.compose.animation.core.tween(durationMillis = 100)) +
+                         scaleOut(targetScale = 0.94f, animationSpec = androidx.compose.animation.core.tween(durationMillis = 100))).using(
+                            SizeTransform(clip = false) { _, _ -> null }
+                        )
+                    }
+                    isFromExpanded -> {
+                        // Collapsing back to compact: clean exit
+                        (fadeIn(animationSpec = androidx.compose.animation.core.tween(durationMillis = 140, delayMillis = 30))) togetherWith
+                        (fadeOut(animationSpec = androidx.compose.animation.core.tween(durationMillis = 90)) +
+                         scaleOut(targetScale = 0.95f, animationSpec = androidx.compose.animation.core.tween(durationMillis = 90))).using(
+                            SizeTransform(clip = false) { _, _ -> null }
+                        )
+                    }
+                    else -> {
+                        // Idle <-> Compact
+                        (fadeIn(animationSpec = androidx.compose.animation.core.tween(durationMillis = 160, delayMillis = 30)) +
+                         scaleIn(initialScale = 0.92f, animationSpec = spring(dampingRatio = 1.0f, stiffness = Spring.StiffnessMedium))) togetherWith
+                        (fadeOut(animationSpec = androidx.compose.animation.core.tween(durationMillis = 110)) +
+                         scaleOut(targetScale = 0.92f, animationSpec = androidx.compose.animation.core.tween(durationMillis = 110))).using(
+                            SizeTransform(clip = false) { _, _ -> null }
+                        )
+                    }
+                }
             },
             label = "IslandContentMorph"
         ) { targetState ->

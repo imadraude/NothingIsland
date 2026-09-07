@@ -11,12 +11,12 @@ data class CutoutConfig(
     val cameraTopMarginDp: Float = 12.57f,   // Distance from top of screen to top of camera cutout (12.57dp on Nothing 2a)
     val cameraDiameterDp: Float = 22.1f,     // Hardware camera cutout diameter (22.1dp on Nothing 2a)
     val compactPillHeightDp: Float = 38f,    // Perfectly centered 38dp pill height (dynamicSpot standard with 8dp padding above & below)
-    val compactMediaWidthDp: Float = 150f,   // Compact width for media playback
+    val compactMediaWidthDp: Float = 160f,   // Compact width for media playback
     val compactNotifWidthDp: Float = 200f,   // Compact width for notification preview
-    val compactBatteryWidthDp: Float = 104f, // Compact width for battery HUD
-    val compactTimerWidthDp: Float = 134f,   // Compact width for countdown timer
-    val compactVolumeWidthDp: Float = 114f,  // Compact width for volume indicator
-    val compactPillWidthDp: Float = 150f,    // Default compact width fallback
+    val compactBatteryWidthDp: Float = 120f, // Compact width for battery HUD
+    val compactTimerWidthDp: Float = 136f,   // Compact width for countdown timer
+    val compactVolumeWidthDp: Float = 120f,  // Compact width for volume indicator
+    val compactPillWidthDp: Float = 160f,    // Default compact width fallback
     val expandedCardWidthDp: Float = 340f,   // Expanded card width
     val expandedCardHeightDp: Float = 190f,  // Expanded card height ensuring camera clearance
     val isAutoDetected: Boolean = false      // True if auto-detected from hardware

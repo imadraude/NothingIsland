@@ -150,6 +150,7 @@ fun CompactPillContent(
                         fontSize = 11.sp,
                         fontWeight = FontWeight.Medium,
                         maxLines = 1,
+                        softWrap = false,
                         overflow = TextOverflow.Ellipsis,
                         fontFamily = FontFamily.Monospace,
                         letterSpacing = 0.5.sp
@@ -162,7 +163,10 @@ fun CompactPillContent(
                         fontSize = 11.sp,
                         fontWeight = FontWeight.Bold,
                         fontFamily = FontFamily.Monospace,
-                        letterSpacing = 0.5.sp
+                        letterSpacing = 0.5.sp,
+                        maxLines = 1,
+                        softWrap = false,
+                        overflow = TextOverflow.Clip
                     )
                 }
                 is IslandState.Compact.Volume -> {
@@ -173,7 +177,10 @@ fun CompactPillContent(
                         fontSize = 11.sp,
                         fontWeight = FontWeight.SemiBold,
                         fontFamily = FontFamily.Monospace,
-                        letterSpacing = 0.5.sp
+                        letterSpacing = 0.5.sp,
+                        maxLines = 1,
+                        softWrap = false,
+                        overflow = TextOverflow.Clip
                     )
                 }
                 is IslandState.Compact.Timer -> {
@@ -185,7 +192,10 @@ fun CompactPillContent(
                         fontSize = 11.sp,
                         fontWeight = FontWeight.Bold,
                         fontFamily = FontFamily.Monospace,
-                        letterSpacing = 0.8.sp
+                        letterSpacing = 0.8.sp,
+                        maxLines = 1,
+                        softWrap = false,
+                        overflow = TextOverflow.Clip
                     )
                 }
             }

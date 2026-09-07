@@ -201,8 +201,12 @@ class IslandOverlayService : Service() {
                 IslandApplication.cutoutConfigFlow
             ) { state, _ -> state }.collectLatest { state ->
                 composeView?.let { view ->
+                    val config = IslandApplication.cutoutConfig
+                    val prevW = getTargetWidthDp(previousState, config)
+                    val nextW = getTargetWidthDp(state, config)
                     val isShrinking = (previousState is IslandState.Expanded && state !is IslandState.Expanded) ||
-                            (previousState is IslandState.Compact && state is IslandState.Idle)
+                            (previousState is IslandState.Compact && state is IslandState.Idle) ||
+                            (nextW < prevW)
 
                     if (isShrinking) {
                         try {
@@ -224,6 +228,19 @@ class IslandOverlayService : Service() {
                     previousState = state
                 }
             }
+        }
+    }
+
+    private fun getTargetWidthDp(state: IslandState, config: CutoutConfig): Float {
+        return when (state) {
+            is IslandState.Idle -> config.cameraDiameterDp
+            is IslandState.Compact.Media -> config.compactMediaWidthDp
+            is IslandState.Compact.Notification -> config.compactNotifWidthDp
+            is IslandState.Compact.Battery -> config.compactBatteryWidthDp
+            is IslandState.Compact.Timer -> config.compactTimerWidthDp
+            is IslandState.Compact.Volume -> config.compactVolumeWidthDp
+            is IslandState.Compact -> config.compactPillWidthDp
+            is IslandState.Expanded -> config.expandedCardWidthDp
         }
     }
 

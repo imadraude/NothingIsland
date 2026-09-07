@@ -190,4 +190,23 @@ class IslandStateManagerTest {
         assertTrue(stateManager.state.value is IslandState.Compact.Media)
         assertEquals("Die For You", (stateManager.state.value as IslandState.Compact.Media).media.title)
     }
+
+    @Test
+    fun newTrack_overridesTemporaryHUD() {
+        val battery = IslandEvent.Battery(percentage = 85, isCharging = true)
+        stateManager.postEvent(battery)
+        assertTrue(stateManager.state.value is IslandState.Compact.Battery)
+
+        val media = IslandEvent.Media(
+            packageName = "com.spotify.music",
+            appName = "Spotify",
+            title = "Birds of a Feather",
+            artist = "Billie Eilish",
+            isPlaying = true
+        )
+        stateManager.postEvent(media)
+
+        assertTrue(stateManager.state.value is IslandState.Compact.Media)
+        assertEquals("Birds of a Feather", (stateManager.state.value as IslandState.Compact.Media).media.title)
+    }
 }

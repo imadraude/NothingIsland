@@ -64,6 +64,12 @@ class IslandStateManager(
             dismissedMediaKey = null
         }
 
+        val isNewTrackOrPlaybackChange = currentMedia == null ||
+                currentMedia?.title != media.title ||
+                currentMedia?.artist != media.artist ||
+                currentMedia?.packageName != media.packageName ||
+                (currentMedia?.isPlaying == false && media.isPlaying)
+
         currentMedia = if (media.isPlaying || media.title.isNotBlank()) media else null
 
         // If user is currently in expanded mode, maintain expanded view without jumping
@@ -87,7 +93,12 @@ class IslandStateManager(
             is IslandState.Compact.Notification,
             is IslandState.Compact.Battery,
             is IslandState.Compact.Volume -> {
-                // Temporary HUD is showing; let it finish its timer, media will resolve in fallback
+                if (isNewTrackOrPlaybackChange && media.isPlaying) {
+                    // Explicit new track or play action overrides temporary HUD immediately
+                    autoDismissJob?.cancel()
+                    _state.value = IslandState.Compact.Media(media)
+                }
+                // Otherwise temporary HUD is showing; let it finish its timer, media will resolve in fallback
             }
             IslandState.Idle -> {
                 // Only show if playing and not explicitly dismissed by user

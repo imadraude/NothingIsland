@@ -5,6 +5,18 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.3.1] - 2026-09-07
+### Fixed & Improved
+- **Silky-Smooth Compact Transitions & Preview Fix**:
+  - Eliminated jerky, stuttering animations when switching previews in `MainActivity` and switching between compact states (`Media` <-> `Battery` <-> `Notification`).
+  - Implemented critically damped spring motion (`dampingRatio = 1.0f`, `stiffness = Spring.StiffnessMediumLow`) for intra-compact width morphing, completely removing rubbery overshoot and wobbling.
+  - Replaced full-pill `scaleIn`/`scaleOut` during compact state transitions with a pure, subtle crossfade and disabled `SizeTransform` clashes (`SizeTransform(clip = false) { _, _ -> null }`), allowing the parent `updateTransition` to smoothly control dimensions without frame-by-frame layout fighting.
+  - Added semantic `contentKey` to `AnimatedContent` so internal updates (such as media position progress ticks or battery percentage changes) no longer trigger unnecessary enter/exit layout animations.
+  - Hardened `CompactPill`: added `maxLines = 1, softWrap = false, overflow = TextOverflow.Clip` to all text composables (Battery, Volume, Timer, Notification), preventing multi-line wrap glitches and height pops during width morphing.
+  - Calibrated compact HUD widths (`compactBatteryWidthDp = 120f`, `compactVolumeWidthDp = 120f`, `compactTimerWidthDp = 136f`, `compactMediaWidthDp = 160f`) to provide comfortable clearance around the physical punch-hole and prevent text clipping.
+  - Enhanced `IslandOverlayService` layout observer to delay WindowManager resizing until animation is settled whenever the island width is shrinking, preventing edge clipping on the device.
+  - Improved `IslandStateManager.handleMediaEvent` so explicit new media playback actions immediately override temporary HUDs.
+
 ## [0.3.0] - 2026-09-07
 ### Changed & Improved
 - **Motion & Fluid Physics**:
