@@ -61,14 +61,14 @@ fun ExpandedCardContent(
     Column(
         modifier = modifier
             .fillMaxSize()
-            .padding(start = 16.dp, end = 16.dp, top = 6.dp, bottom = 12.dp),
+            .padding(start = 16.dp, end = 16.dp, top = 0.dp, bottom = 12.dp),
         verticalArrangement = Arrangement.SpaceBetween
     ) {
         // Top header row: perfectly aligned on left and right of hardware camera cutout
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .height(config.cameraDiameterDp.dp),
+                .height(config.compactPillHeightDp.dp),
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
@@ -146,7 +146,7 @@ private fun MediaExpandedBody(
 
     Column(
         modifier = Modifier.fillMaxWidth(),
-        verticalArrangement = Arrangement.spacedBy(10.dp)
+        verticalArrangement = Arrangement.spacedBy(8.dp)
     ) {
         // Track info row
         Row(
@@ -159,15 +159,15 @@ private fun MediaExpandedBody(
                     bitmap = art.asImageBitmap(),
                     contentDescription = null,
                     modifier = Modifier
-                        .size(52.dp)
-                        .clip(RoundedCornerShape(12.dp)),
+                        .size(46.dp)
+                        .clip(RoundedCornerShape(10.dp)),
                     contentScale = ContentScale.Crop
                 )
             } else {
                 Box(
                     modifier = Modifier
-                        .size(52.dp)
-                        .clip(RoundedCornerShape(12.dp))
+                        .size(46.dp)
+                        .clip(RoundedCornerShape(10.dp))
                         .background(NothingSubtleGrey),
                     contentAlignment = Alignment.Center
                 ) {
@@ -175,7 +175,7 @@ private fun MediaExpandedBody(
                         imageVector = Icons.Default.MusicNote,
                         contentDescription = null,
                         tint = NothingRed,
-                        modifier = Modifier.size(26.dp)
+                        modifier = Modifier.size(24.dp)
                     )
                 }
             }
@@ -186,7 +186,7 @@ private fun MediaExpandedBody(
                 Text(
                     text = media.title.ifBlank { "Nothing Playing" },
                     color = NothingWhite,
-                    fontSize = 15.sp,
+                    fontSize = 14.sp,
                     fontWeight = FontWeight.Bold,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
@@ -195,7 +195,7 @@ private fun MediaExpandedBody(
                 Text(
                     text = media.artist.ifBlank { "Unknown Artist" },
                     color = NothingGrey,
-                    fontSize = 12.sp,
+                    fontSize = 11.sp,
                     fontWeight = FontWeight.Normal,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
@@ -207,7 +207,7 @@ private fun MediaExpandedBody(
             NdotVisualizer(
                 isPlaying = media.isPlaying,
                 activeColor = NothingRed,
-                size = 22.dp
+                size = 20.dp
             )
         }
 
@@ -224,7 +224,7 @@ private fun MediaExpandedBody(
                     color = NothingRed,
                     trackColor = NothingCardBorder
                 )
-                Spacer(modifier = Modifier.height(4.dp))
+                Spacer(modifier = Modifier.height(3.dp))
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween
@@ -253,19 +253,19 @@ private fun MediaExpandedBody(
         ) {
             IconButton(
                 onClick = { stateManager.skipPrevious() },
-                modifier = Modifier.size(40.dp)
+                modifier = Modifier.size(36.dp)
             ) {
                 Icon(
                     imageVector = Icons.Default.SkipPrevious,
                     contentDescription = "Previous",
                     tint = NothingWhite,
-                    modifier = Modifier.size(24.dp)
+                    modifier = Modifier.size(22.dp)
                 )
             }
 
             Box(
                 modifier = Modifier
-                    .size(44.dp)
+                    .size(40.dp)
                     .clip(CircleShape)
                     .background(NothingWhite),
                 contentAlignment = Alignment.Center
@@ -274,26 +274,26 @@ private fun MediaExpandedBody(
                     onClick = {
                         if (media.isPlaying) stateManager.pauseMedia() else stateManager.playMedia()
                     },
-                    modifier = Modifier.size(44.dp)
+                    modifier = Modifier.size(40.dp)
                 ) {
                     Icon(
                         imageVector = if (media.isPlaying) Icons.Default.Pause else Icons.Default.PlayArrow,
                         contentDescription = if (media.isPlaying) "Pause" else "Play",
                         tint = Color.Black,
-                        modifier = Modifier.size(22.dp)
+                        modifier = Modifier.size(20.dp)
                     )
                 }
             }
 
             IconButton(
                 onClick = { stateManager.skipNext() },
-                modifier = Modifier.size(40.dp)
+                modifier = Modifier.size(36.dp)
             ) {
                 Icon(
                     imageVector = Icons.Default.SkipNext,
                     contentDescription = "Next",
                     tint = NothingWhite,
-                    modifier = Modifier.size(24.dp)
+                    modifier = Modifier.size(22.dp)
                 )
             }
         }

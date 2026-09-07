@@ -107,14 +107,22 @@ fun MainScreen() {
     var pillHeight by remember { mutableFloatStateOf(IslandApplication.cutoutConfig.compactPillHeightDp) }
     var cameraDiameter by remember { mutableFloatStateOf(IslandApplication.cutoutConfig.cameraDiameterDp) }
     var compactWidth by remember { mutableFloatStateOf(IslandApplication.cutoutConfig.compactPillWidthDp) }
+    var isAutoDetected by remember { mutableStateOf(IslandApplication.cutoutConfig.isAutoDetected) }
 
     val liveConfig = CutoutConfig(
         cameraCenterXOffsetDp = centerXOffset,
         cameraTopMarginDp = topMargin,
         cameraDiameterDp = cameraDiameter,
         compactPillHeightDp = pillHeight,
+        compactMediaWidthDp = compactWidth,
+        compactNotifWidthDp = (compactWidth + 50f).coerceAtLeast(180f),
+        compactBatteryWidthDp = 100f,
+        compactTimerWidthDp = 130f,
+        compactVolumeWidthDp = 110f,
         compactPillWidthDp = compactWidth,
-        compactMediaWidthDp = compactWidth
+        expandedCardWidthDp = 340f,
+        expandedCardHeightDp = 190f,
+        isAutoDetected = isAutoDetected
     )
     LaunchedEffect(liveConfig) {
         IslandApplication.cutoutConfig = liveConfig
@@ -379,21 +387,50 @@ fun MainScreen() {
                 fontWeight = FontWeight.Bold,
                 fontFamily = FontFamily.Monospace
             )
-            OutlinedButton(
-                onClick = {
-                    IslandApplication.resetToDefaults()
-                    val def = IslandApplication.cutoutConfig
-                    topMargin = def.cameraTopMarginDp
-                    centerXOffset = def.cameraCenterXOffsetDp
-                    pillHeight = def.compactPillHeightDp
-                    cameraDiameter = def.cameraDiameterDp
-                    compactWidth = def.compactPillWidthDp
-                },
-                shape = RoundedCornerShape(6.dp)
-            ) {
-                Text("↺ Reset", color = NothingRed, fontSize = 11.sp)
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                OutlinedButton(
+                    onClick = {
+                        val detected = IslandApplication.autoDetectAndApply()
+                        if (detected != null) {
+                            topMargin = detected.cameraTopMarginDp
+                            centerXOffset = detected.cameraCenterXOffsetDp
+                            pillHeight = detected.compactPillHeightDp
+                            cameraDiameter = detected.cameraDiameterDp
+                            compactWidth = detected.compactPillWidthDp
+                            isAutoDetected = true
+                        }
+                    },
+                    shape = RoundedCornerShape(6.dp)
+                ) {
+                    Text("⚡ Auto-Detect", color = NothingWhite, fontSize = 11.sp)
+                }
+                OutlinedButton(
+                    onClick = {
+                        IslandApplication.resetToDefaults()
+                        val def = IslandApplication.cutoutConfig
+                        topMargin = def.cameraTopMarginDp
+                        centerXOffset = def.cameraCenterXOffsetDp
+                        pillHeight = def.compactPillHeightDp
+                        cameraDiameter = def.cameraDiameterDp
+                        compactWidth = def.compactPillWidthDp
+                        isAutoDetected = def.isAutoDetected
+                    },
+                    shape = RoundedCornerShape(6.dp)
+                ) {
+                    Text("↺ Reset", color = NothingRed, fontSize = 11.sp)
+                }
             }
         }
+
+        Spacer(modifier = Modifier.height(6.dp))
+
+        Text(
+            text = if (isAutoDetected) "● Cutout auto-detected from hardware" else "○ Manual adjustments applied",
+            color = if (isAutoDetected) Color(0xFF4CAF50) else NothingGrey,
+            fontSize = 11.sp,
+            fontFamily = FontFamily.Monospace,
+            modifier = Modifier.align(Alignment.Start)
+        )
 
         Spacer(modifier = Modifier.height(10.dp))
 
@@ -405,7 +442,10 @@ fun MainScreen() {
         )
         Slider(
             value = topMargin,
-            onValueChange = { topMargin = it },
+            onValueChange = {
+                topMargin = it
+                isAutoDetected = false
+            },
             valueRange = 0f..25f,
             colors = SliderDefaults.colors(
                 thumbColor = NothingRed,
@@ -422,7 +462,10 @@ fun MainScreen() {
         )
         Slider(
             value = centerXOffset,
-            onValueChange = { centerXOffset = it },
+            onValueChange = {
+                centerXOffset = it
+                isAutoDetected = false
+            },
             valueRange = -20f..20f,
             colors = SliderDefaults.colors(
                 thumbColor = NothingRed,
@@ -439,8 +482,11 @@ fun MainScreen() {
         )
         Slider(
             value = pillHeight,
-            onValueChange = { pillHeight = it },
-            valueRange = 34f..48f,
+            onValueChange = {
+                pillHeight = it
+                isAutoDetected = false
+            },
+            valueRange = 28f..44f,
             colors = SliderDefaults.colors(
                 thumbColor = NothingRed,
                 activeTrackColor = NothingRed,
@@ -456,8 +502,11 @@ fun MainScreen() {
         )
         Slider(
             value = cameraDiameter,
-            onValueChange = { cameraDiameter = it },
-            valueRange = 24f..44f,
+            onValueChange = {
+                cameraDiameter = it
+                isAutoDetected = false
+            },
+            valueRange = 20f..40f,
             colors = SliderDefaults.colors(
                 thumbColor = NothingRed,
                 activeTrackColor = NothingRed,
@@ -473,8 +522,11 @@ fun MainScreen() {
         )
         Slider(
             value = compactWidth,
-            onValueChange = { compactWidth = it },
-            valueRange = 140f..240f,
+            onValueChange = {
+                compactWidth = it
+                isAutoDetected = false
+            },
+            valueRange = 100f..220f,
             colors = SliderDefaults.colors(
                 thumbColor = NothingRed,
                 activeTrackColor = NothingRed,

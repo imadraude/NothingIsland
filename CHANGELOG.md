@@ -6,6 +6,17 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
+### Added
+- Hardware punch-hole camera auto-detection from Android `DisplayCutout` (`CutoutConfig.detectFromSystem`).
+- "Auto-Detect" button and status badge in Calibration settings.
+
+### Changed
+- Refined default pill and expanded card dimensions to be much sleeker and proportional to physical Nothing Phone (2a) camera:
+  - Resting pill height reduced from 40dp to 34dp (28dp hardware camera + 3dp OLED margins).
+  - Compact media pill width reduced from 184dp to 136dp.
+  - Expanded card height reduced to 190dp with camera header clearance.
+  - Proportional icons, album art, and typography.
+- Calibrated slider ranges in MainActivity (pill height 28-44dp, camera diameter 20-40dp, compact width 100-220dp).
 
 ## [0.1.5] - 2026-09-07
 

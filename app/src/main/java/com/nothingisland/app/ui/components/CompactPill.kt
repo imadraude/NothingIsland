@@ -48,7 +48,7 @@ fun CompactPillContent(
     Row(
         modifier = modifier
             .fillMaxSize()
-            .padding(horizontal = 12.dp),
+            .padding(horizontal = 9.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.SpaceBetween
     ) {
@@ -67,14 +67,14 @@ fun CompactPillContent(
                             bitmap = art.asImageBitmap(),
                             contentDescription = null,
                             modifier = Modifier
-                                .size(26.dp)
-                                .clip(RoundedCornerShape(7.dp)),
+                                .size(22.dp)
+                                .clip(RoundedCornerShape(6.dp)),
                             contentScale = ContentScale.Crop
                         )
                     } else {
                         Box(
                             modifier = Modifier
-                                .size(26.dp)
+                                .size(22.dp)
                                 .clip(CircleShape)
                                 .background(NothingRed.copy(alpha = 0.2f)),
                             contentAlignment = Alignment.Center
@@ -83,7 +83,7 @@ fun CompactPillContent(
                                 imageVector = Icons.Default.MusicNote,
                                 contentDescription = null,
                                 tint = NothingRed,
-                                modifier = Modifier.size(15.dp)
+                                modifier = Modifier.size(13.dp)
                             )
                         }
                     }
@@ -93,7 +93,7 @@ fun CompactPillContent(
                         imageVector = Icons.Default.Notifications,
                         contentDescription = null,
                         tint = NothingWhite,
-                        modifier = Modifier.size(18.dp)
+                        modifier = Modifier.size(15.dp)
                     )
                 }
                 is IslandState.Compact.Battery -> {
@@ -101,7 +101,7 @@ fun CompactPillContent(
                         imageVector = Icons.Default.BatteryChargingFull,
                         contentDescription = null,
                         tint = if (state.battery.isCharging) NothingRed else NothingWhite,
-                        modifier = Modifier.size(20.dp)
+                        modifier = Modifier.size(16.dp)
                     )
                 }
                 is IslandState.Compact.Volume -> {
@@ -109,7 +109,7 @@ fun CompactPillContent(
                         imageVector = Icons.Default.VolumeUp,
                         contentDescription = null,
                         tint = NothingWhite,
-                        modifier = Modifier.size(18.dp)
+                        modifier = Modifier.size(15.dp)
                     )
                 }
                 is IslandState.Compact.Timer -> {
@@ -117,14 +117,14 @@ fun CompactPillContent(
                         imageVector = Icons.Default.Timer,
                         contentDescription = null,
                         tint = NothingRed,
-                        modifier = Modifier.size(18.dp)
+                        modifier = Modifier.size(15.dp)
                     )
                 }
             }
         }
 
         // Dedicated exclusion zone centered over hardware punch-hole camera
-        Spacer(modifier = Modifier.width((config.cameraDiameterDp + 12f).dp))
+        Spacer(modifier = Modifier.width((config.cameraDiameterDp + 8f).dp))
 
         // Right side of camera hole (symmetrically allocated)
         Box(
@@ -138,7 +138,7 @@ fun CompactPillContent(
                     NdotVisualizer(
                         isPlaying = state.media.isPlaying,
                         activeColor = NothingRed,
-                        size = 20.dp
+                        size = 16.dp
                     )
                 }
                 is IslandState.Compact.Notification -> {
@@ -156,7 +156,7 @@ fun CompactPillContent(
                     Text(
                         text = "${state.battery.percentage}%",
                         color = if (state.battery.isCharging) NothingRed else NothingWhite,
-                        fontSize = 12.sp,
+                        fontSize = 11.sp,
                         fontWeight = FontWeight.Bold,
                         fontFamily = FontFamily.Monospace
                     )
