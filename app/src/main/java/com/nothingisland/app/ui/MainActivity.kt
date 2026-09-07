@@ -536,7 +536,7 @@ fun MainScreen() {
                 pillHeight = it
                 isAutoDetected = false
             },
-            valueRange = 28f..52f,
+            valueRange = 20f..40f,
             colors = SliderDefaults.colors(
                 thumbColor = NothingRed,
                 activeTrackColor = NothingRed,
@@ -556,7 +556,7 @@ fun MainScreen() {
                 cameraDiameter = it
                 isAutoDetected = false
             },
-            valueRange = 20f..40f,
+            valueRange = 16f..36f,
             colors = SliderDefaults.colors(
                 thumbColor = NothingRed,
                 activeTrackColor = NothingRed,

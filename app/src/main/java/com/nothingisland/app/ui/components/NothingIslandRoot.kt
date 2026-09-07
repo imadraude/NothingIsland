@@ -74,6 +74,12 @@ fun NothingIslandRoot(
         is IslandState.Expanded -> 28.dp
     }
 
+    val targetTopMargin = when (state) {
+        is IslandState.Idle -> config.cameraTopMarginDp.dp
+        is IslandState.Compact -> config.pillTopMarginDp.dp
+        is IslandState.Expanded -> config.pillTopMarginDp.dp
+    }
+
     // Apple-style interruptible spring physics
     val animatedWidth by animateDpAsState(
         targetValue = targetWidth,
@@ -93,6 +99,15 @@ fun NothingIslandRoot(
         label = "IslandHeight"
     )
 
+    val animatedTopMargin by animateDpAsState(
+        targetValue = targetTopMargin,
+        animationSpec = spring(
+            dampingRatio = 0.78f,
+            stiffness = Spring.StiffnessMediumLow
+        ),
+        label = "IslandTopMargin"
+    )
+
     val animatedCornerRadius by animateDpAsState(
         targetValue = targetCornerRadius,
         animationSpec = spring(
@@ -109,7 +124,7 @@ fun NothingIslandRoot(
         modifier = modifier
             .offset(
                 x = if (applyHorizontalCutoutOffset) config.cameraCenterXOffsetDp.dp else 0.dp,
-                y = config.pillTopMarginDp.dp
+                y = animatedTopMargin
             )
             .width(animatedWidth)
             .height(animatedHeight)

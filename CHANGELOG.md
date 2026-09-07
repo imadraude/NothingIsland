@@ -5,6 +5,18 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.2.4] - 2026-09-07
+### Changed
+- Refined compact pill height to a sleek, thin 26dp (reduced from 32dp), hugging the hardware camera cutout with 1.85dp top & bottom clearance.
+- Calibrated camera cutout top margin to 8.5dp for Nothing Phone (2a), preventing the pill from drooping low below the front camera and aligning it seamlessly in the status bar.
+- Resized compact media player artwork (20dp), visualizer, and icons (12-15dp) with refined typography (10.5sp) for balanced padding in the 26dp pill.
+
+### Fixed
+- Fixed Idle state camera camouflage: animated top margin transition between `cameraTopMarginDp` (in Idle) and `pillTopMarginDp` (in Compact/Expanded), eliminating upward shift and exposing of the camera lens.
+- Prioritized factory-calibrated hardware profiles in `CameraCutoutDetector.chooseDetectionResult` to override buggy OEM overlay cutout bounding boxes.
+- Extended calibration slider ranges in Settings (Pill Height 20dp-40dp, Camera Diameter 16dp-36dp).
+- Migrated SharedPreferences key to `is_configured_v5` to automatically apply the 26dp sleek calibration.
+
 ## [0.2.3] - 2026-09-07
 ### Fixed
 - Fixed critical cutout clipping & horizontal displacement on Nothing Phone (2a): bypassed OEM bug in `FrameworksResCommon_Sys_Pacman.apk` (`boundingRectTop` truncated at `X=540` rather than covering the full circle `511..569.5px`), eliminating horizontal misplacement.

@@ -76,8 +76,8 @@ class CameraCutoutDetectorTest {
         assertEquals(0f, config.cameraCenterXOffsetDp, 0.01f)
         assertEquals(9f, config.cameraTopMarginDp, 0.01f)
         assertEquals(28f, config.cameraDiameterDp, 0.01f)
-        // Pill height = 32dp (aesthetic standard ensuring padding for icons)
-        assertEquals(32f, config.compactPillHeightDp, 0.01f)
+        // Pill height = maxOf(26f, diameterDp = 28f) -> 28f
+        assertEquals(28f, config.compactPillHeightDp, 0.01f)
         assertTrue(config.isAutoDetected)
     }
 
@@ -104,7 +104,7 @@ class CameraCutoutDetectorTest {
         assertEquals(-30f, config.cameraCenterXOffsetDp, 0.01f)
         assertEquals(9f, config.cameraTopMarginDp, 0.01f)
         assertEquals(28f, config.cameraDiameterDp, 0.01f)
-        assertEquals(32f, config.compactPillHeightDp, 0.01f)
+        assertEquals(28f, config.compactPillHeightDp, 0.01f)
     }
 
     @Test
@@ -129,18 +129,18 @@ class CameraCutoutDetectorTest {
 
         // Must snap strictly to 0f to eliminate jitter and misalignment
         assertEquals(0f, config.cameraCenterXOffsetDp, 0.0f)
-        assertEquals(32f, config.compactPillHeightDp, 0.01f)
+        assertEquals(28f, config.compactPillHeightDp, 0.01f)
     }
 
     @Test
-    fun chooseDetectionResult_prefersLiveWindowGeometry() {
+    fun chooseDetectionResult_prefersCalibratedHardwareProfile() {
         val live = CutoutConfig(cameraTopMarginDp = 7f, cameraDiameterDp = 31f)
         val profile = CutoutConfig(cameraTopMarginDp = 9f, cameraDiameterDp = 28f)
         val resource = CutoutConfig(cameraTopMarginDp = 8f, cameraDiameterDp = 30f)
 
-        assertEquals(live, CameraCutoutDetector.chooseDetectionResult(live, profile, resource))
-        assertEquals(resource, CameraCutoutDetector.chooseDetectionResult(null, profile, resource))
-        assertEquals(profile, CameraCutoutDetector.chooseDetectionResult(null, profile, null))
+        assertEquals(profile, CameraCutoutDetector.chooseDetectionResult(live, profile, resource))
+        assertEquals(live, CameraCutoutDetector.chooseDetectionResult(live, null, resource))
+        assertEquals(resource, CameraCutoutDetector.chooseDetectionResult(null, null, resource))
     }
 
     @Test
@@ -193,7 +193,7 @@ class CameraCutoutDetectorTest {
         // Expected offset: 28dp - 180dp = -152dp
         assertEquals(-152f, config.cameraCenterXOffsetDp, 0.01f)
         assertEquals(28f, config.cameraDiameterDp, 0.01f)
-        assertEquals(32f, config.compactPillHeightDp, 0.01f)
+        assertEquals(28f, config.compactPillHeightDp, 0.01f)
     }
 
     @Test
@@ -268,16 +268,17 @@ class CameraCutoutDetectorTest {
         assertEquals(0f, config.cameraCenterXOffsetDp, 0.001f)
         assertEquals(12.57f, config.cameraTopMarginDp, 0.05f)
         assertEquals(22.29f, config.cameraDiameterDp, 0.05f)
-        assertEquals(32f, config.compactPillHeightDp, 0.01f)
+        // Sleek 26dp pill height
+        assertEquals(26f, config.compactPillHeightDp, 0.01f)
 
-        // Pill center Y = 12.57 + (22.29 / 2) = 23.71dp
-        // Pill top = 23.71 - 16 = 7.71dp
-        assertEquals(7.71f, config.pillTopMarginDp, 0.05f)
+        // Pill center Y = 12.57 + (22.29 / 2) = 23.715dp
+        // Pill top = 23.715 - (26 / 2) = 10.715dp
+        assertEquals(10.715f, config.pillTopMarginDp, 0.05f)
 
         // Symmetrical padding around camera:
         val topPadding = config.cameraTopMarginDp - config.pillTopMarginDp
         val bottomPadding = (config.pillTopMarginDp + config.compactPillHeightDp) -
                 (config.cameraTopMarginDp + config.cameraDiameterDp)
-        assertEquals(topPadding, bottomPadding, 0.1f)
+        assertEquals(topPadding, bottomPadding, 0.05f)
     }
 }
