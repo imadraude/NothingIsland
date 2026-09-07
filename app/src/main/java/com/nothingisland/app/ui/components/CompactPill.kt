@@ -48,11 +48,11 @@ fun CompactPillContent(
     Row(
         modifier = modifier
             .fillMaxSize()
-            .padding(horizontal = 9.dp),
+            .padding(horizontal = 10.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.SpaceBetween
     ) {
-        // Left side of camera hole (symmetrically allocated)
+        // Left wing of camera cutout
         Box(
             modifier = Modifier
                 .weight(1f)
@@ -67,23 +67,24 @@ fun CompactPillContent(
                             bitmap = art.asImageBitmap(),
                             contentDescription = null,
                             modifier = Modifier
-                                .size(20.dp)
-                                .clip(RoundedCornerShape(5.dp)),
+                                .size(22.dp)
+                                .clip(RoundedCornerShape(6.dp))
+                                .background(NothingDarkSurface),
                             contentScale = ContentScale.Crop
                         )
                     } else {
                         Box(
                             modifier = Modifier
-                                .size(20.dp)
+                                .size(22.dp)
                                 .clip(CircleShape)
-                                .background(NothingRed.copy(alpha = 0.2f)),
+                                .background(NothingRed.copy(alpha = 0.25f)),
                             contentAlignment = Alignment.Center
                         ) {
                             Icon(
                                 imageVector = Icons.Default.MusicNote,
                                 contentDescription = null,
                                 tint = NothingRed,
-                                modifier = Modifier.size(12.dp)
+                                modifier = Modifier.size(13.dp)
                             )
                         }
                     }
@@ -93,7 +94,7 @@ fun CompactPillContent(
                         imageVector = Icons.Default.Notifications,
                         contentDescription = null,
                         tint = NothingWhite,
-                        modifier = Modifier.size(14.dp)
+                        modifier = Modifier.size(15.dp)
                     )
                 }
                 is IslandState.Compact.Battery -> {
@@ -101,7 +102,7 @@ fun CompactPillContent(
                         imageVector = Icons.Default.BatteryChargingFull,
                         contentDescription = null,
                         tint = if (state.battery.isCharging) NothingRed else NothingWhite,
-                        modifier = Modifier.size(15.dp)
+                        modifier = Modifier.size(16.dp)
                     )
                 }
                 is IslandState.Compact.Volume -> {
@@ -109,7 +110,7 @@ fun CompactPillContent(
                         imageVector = Icons.Default.VolumeUp,
                         contentDescription = null,
                         tint = NothingWhite,
-                        modifier = Modifier.size(14.dp)
+                        modifier = Modifier.size(15.dp)
                     )
                 }
                 is IslandState.Compact.Timer -> {
@@ -117,16 +118,16 @@ fun CompactPillContent(
                         imageVector = Icons.Default.Timer,
                         contentDescription = null,
                         tint = NothingRed,
-                        modifier = Modifier.size(14.dp)
+                        modifier = Modifier.size(15.dp)
                     )
                 }
             }
         }
 
-        // Dedicated exclusion zone centered over hardware punch-hole camera
-        Spacer(modifier = Modifier.width((config.cameraDiameterDp + 6f).dp))
+        // Camera punch hole exclusion zone
+        Spacer(modifier = Modifier.width((config.cameraDiameterDp + 8f).dp))
 
-        // Right side of camera hole (symmetrically allocated)
+        // Right wing of camera cutout
         Box(
             modifier = Modifier
                 .weight(1f)
@@ -138,27 +139,29 @@ fun CompactPillContent(
                     NdotVisualizer(
                         isPlaying = state.media.isPlaying,
                         activeColor = NothingRed,
-                        size = 14.dp
+                        size = 15.dp
                     )
                 }
                 is IslandState.Compact.Notification -> {
                     Text(
                         text = state.notification.title,
                         color = NothingWhite,
-                        fontSize = 10.5.sp,
+                        fontSize = 11.sp,
                         fontWeight = FontWeight.Medium,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis,
-                        fontFamily = FontFamily.Monospace
+                        fontFamily = FontFamily.Monospace,
+                        letterSpacing = 0.5.sp
                     )
                 }
                 is IslandState.Compact.Battery -> {
                     Text(
                         text = "${state.battery.percentage}%",
                         color = if (state.battery.isCharging) NothingRed else NothingWhite,
-                        fontSize = 10.5.sp,
+                        fontSize = 11.sp,
                         fontWeight = FontWeight.Bold,
-                        fontFamily = FontFamily.Monospace
+                        fontFamily = FontFamily.Monospace,
+                        letterSpacing = 0.5.sp
                     )
                 }
                 is IslandState.Compact.Volume -> {
@@ -166,9 +169,10 @@ fun CompactPillContent(
                     Text(
                         text = "$pct%",
                         color = NothingWhite,
-                        fontSize = 10.5.sp,
+                        fontSize = 11.sp,
                         fontWeight = FontWeight.SemiBold,
-                        fontFamily = FontFamily.Monospace
+                        fontFamily = FontFamily.Monospace,
+                        letterSpacing = 0.5.sp
                     )
                 }
                 is IslandState.Compact.Timer -> {
@@ -177,9 +181,10 @@ fun CompactPillContent(
                     Text(
                         text = String.format("%02d:%02d", m, s),
                         color = NothingRed,
-                        fontSize = 10.5.sp,
+                        fontSize = 11.sp,
                         fontWeight = FontWeight.Bold,
-                        fontFamily = FontFamily.Monospace
+                        fontFamily = FontFamily.Monospace,
+                        letterSpacing = 0.8.sp
                     )
                 }
             }

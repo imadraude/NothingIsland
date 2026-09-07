@@ -13,12 +13,14 @@ import android.os.Build
 import android.os.IBinder
 import android.view.Gravity
 import android.view.WindowManager
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.ComposeView
 import androidx.compose.ui.platform.ViewCompositionStrategy
 import androidx.core.view.ViewCompat
@@ -38,12 +40,15 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withTimeoutOrNull
 
 class IslandOverlayService : Service() {
 
@@ -65,10 +70,29 @@ class IslandOverlayService : Service() {
         _isRunning.value = true
         serviceLifecycleOwner.onCreate()
         windowManager = getSystemService(Context.WINDOW_SERVICE) as WindowManager
+        setupAppLaunchHandler()
         startForegroundServiceNotification()
         setupOverlayView()
         observeState()
         registerBatteryReceiver()
+    }
+
+    private fun setupAppLaunchHandler() {
+        IslandApplication.stateManager.appLaunchHandler = { packageName ->
+            try {
+                val launchIntent = packageManager.getLaunchIntentForPackage(packageName)
+                if (launchIntent != null) {
+                    launchIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_RESET_TASK_IF_NEEDED)
+                    startActivity(launchIntent)
+                    true
+                } else {
+                    false
+                }
+            } catch (e: Exception) {
+                e.printStackTrace()
+                false
+            }
+        }
     }
 
     private fun registerBatteryReceiver() {
@@ -134,9 +158,20 @@ class IslandOverlayService : Service() {
 
                 setContent {
                     val config by IslandApplication.cutoutConfigFlow.collectAsState()
+                    val state by IslandApplication.stateManager.state.collectAsState()
                     NothingIslandTheme {
                         Box(
-                            modifier = Modifier.fillMaxSize(),
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .then(
+                                    if (state is IslandState.Expanded) {
+                                        Modifier.pointerInput(Unit) {
+                                            detectTapGestures(onTap = {
+                                                IslandApplication.stateManager.collapse()
+                                            })
+                                        }
+                                    } else Modifier
+                                ),
                             contentAlignment = Alignment.TopCenter
                         ) {
                             NothingIslandRoot(
@@ -160,11 +195,25 @@ class IslandOverlayService : Service() {
 
     private fun observeState() {
         scope.launch {
+            var previousState: IslandState = IslandState.Idle
             combine(
                 IslandApplication.stateManager.state,
                 IslandApplication.cutoutConfigFlow
             ) { state, _ -> state }.collectLatest { state ->
                 composeView?.let { view ->
+                    val isShrinking = (previousState is IslandState.Expanded && state !is IslandState.Expanded) ||
+                            (previousState is IslandState.Compact && state is IslandState.Idle)
+
+                    if (isShrinking) {
+                        try {
+                            withTimeoutOrNull(420L) {
+                                IslandApplication.stateManager.isTransitionSettled.first { it }
+                            }
+                        } catch (e: Exception) {
+                            delay(380L)
+                        }
+                    }
+
                     val updatedParams = createLayoutParams(state)
                     try {
                         windowManager.updateViewLayout(view, updatedParams)
@@ -172,6 +221,7 @@ class IslandOverlayService : Service() {
                     } catch (e: Exception) {
                         e.printStackTrace()
                     }
+                    previousState = state
                 }
             }
         }
@@ -267,6 +317,7 @@ class IslandOverlayService : Service() {
 
     override fun onDestroy() {
         _isRunning.value = false
+        IslandApplication.stateManager.appLaunchHandler = null
         batteryReceiver?.let {
             try {
                 unregisterReceiver(it)

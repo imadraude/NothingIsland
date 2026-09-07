@@ -13,7 +13,7 @@ import kotlinx.coroutines.launch
 
 /**
  * Deep domain engine managing Dynamic Island state transitions, priority arbitration,
- * gesture handling, and auto-dismissal timers.
+ * gesture handling, app launching, and auto-dismissal timers.
  */
 class IslandStateManager(
     private val scope: CoroutineScope = CoroutineScope(Dispatchers.Main.immediate)
@@ -21,13 +21,30 @@ class IslandStateManager(
     private val _state = MutableStateFlow<IslandState>(IslandState.Idle)
     val state: StateFlow<IslandState> = _state.asStateFlow()
 
+    private val _isTransitionSettled = MutableStateFlow(true)
+    val isTransitionSettled: StateFlow<Boolean> = _isTransitionSettled.asStateFlow()
+
     private var currentMedia: IslandEvent.Media? = null
     private var activeTimer: IslandEvent.Timer? = null
+    private var lastNotification: IslandEvent.Notification? = null
+    private var lastBattery: IslandEvent.Battery? = null
+
+    private var dismissedMediaKey: String? = null
     private var autoDismissJob: Job? = null
     private var mediaActionListener: MediaActionListener? = null
 
+    /**
+     * Optional handler to open apps when the compact pill is tapped.
+     * Returns true if handled, false to fallback to expansion.
+     */
+    var appLaunchHandler: ((packageName: String) -> Boolean)? = null
+
     fun setMediaActionListener(listener: MediaActionListener?) {
         this.mediaActionListener = listener
+    }
+
+    fun setTransitionSettled(settled: Boolean) {
+        _isTransitionSettled.value = settled
     }
 
     fun postEvent(event: IslandEvent) {
@@ -41,12 +58,21 @@ class IslandStateManager(
     }
 
     private fun handleMediaEvent(media: IslandEvent.Media) {
+        val trackKey = "${media.packageName}:${media.title}"
+        if (trackKey != dismissedMediaKey) {
+            // New track started or different app -> reset dismiss suppression
+            dismissedMediaKey = null
+        }
+
         currentMedia = if (media.isPlaying || media.title.isNotBlank()) media else null
 
-        // If user is currently looking at expanded or another high-priority item, don't interrupt aggressively
+        // If user is currently in expanded mode, maintain expanded view without jumping
         when (val curr = _state.value) {
             is IslandState.Expanded.Media -> {
                 _state.value = IslandState.Expanded.Media(media)
+            }
+            is IslandState.Expanded -> {
+                // User is viewing another expanded card (e.g. Timer/Notif) -> don't clobber
             }
             is IslandState.Compact.Media -> {
                 if (media.isPlaying) {
@@ -58,18 +84,29 @@ class IslandStateManager(
                     }
                 }
             }
+            is IslandState.Compact.Notification,
+            is IslandState.Compact.Battery,
+            is IslandState.Compact.Volume -> {
+                // Temporary HUD is showing; let it finish its timer, media will resolve in fallback
+            }
             IslandState.Idle -> {
-                if (media.isPlaying) {
+                // Only show if playing and not explicitly dismissed by user
+                if (media.isPlaying && trackKey != dismissedMediaKey) {
                     _state.value = IslandState.Compact.Media(media)
                 }
             }
-            else -> {
-                // Keep background media updated
-            }
+            else -> Unit
         }
     }
 
     private fun handleNotificationEvent(notification: IslandEvent.Notification) {
+        lastNotification = notification
+
+        // If currently in Expanded view, do NOT kick user out to a compact pill!
+        if (_state.value is IslandState.Expanded) {
+            return
+        }
+
         autoDismissJob?.cancel()
         _state.value = IslandState.Compact.Notification(notification)
         scheduleAutoDismiss(delayMs = 4500L) {
@@ -78,7 +115,13 @@ class IslandStateManager(
     }
 
     private fun handleBatteryEvent(battery: IslandEvent.Battery) {
-        // Show battery pill when connected to charger or fast charging
+        lastBattery = battery
+
+        // If currently in Expanded view, do not collapse user interaction
+        if (_state.value is IslandState.Expanded) {
+            return
+        }
+
         autoDismissJob?.cancel()
         _state.value = IslandState.Compact.Battery(battery)
         scheduleAutoDismiss(delayMs = 3500L) {
@@ -87,52 +130,75 @@ class IslandStateManager(
     }
 
     private fun handleVolumeEvent(volume: IslandEvent.Volume) {
-        // Only show if not in expanded state
-        if (_state.value !is IslandState.Expanded) {
-            autoDismissJob?.cancel()
-            _state.value = IslandState.Compact.Volume(volume)
-            scheduleAutoDismiss(delayMs = 2000L) {
-                _state.value = resolveFallbackState()
-            }
+        // Do not interrupt expanded state
+        if (_state.value is IslandState.Expanded) {
+            return
+        }
+
+        autoDismissJob?.cancel()
+        _state.value = IslandState.Compact.Volume(volume)
+        scheduleAutoDismiss(delayMs = 2000L) {
+            _state.value = resolveFallbackState()
         }
     }
 
     private fun handleTimerEvent(timer: IslandEvent.Timer) {
         activeTimer = if (timer.isRunning && timer.remainingSeconds > 0) timer else null
-        if (_state.value is IslandState.Expanded.Timer) {
-            _state.value = IslandState.Expanded.Timer(timer)
-        } else if (_state.value is IslandState.Compact.Timer || _state.value is IslandState.Idle) {
-            _state.value = if (activeTimer != null) IslandState.Compact.Timer(timer) else resolveFallbackState()
+        when (val current = _state.value) {
+            is IslandState.Expanded.Timer -> {
+                _state.value = IslandState.Expanded.Timer(timer)
+            }
+            is IslandState.Expanded -> {
+                // Another card expanded, keep updated in background
+            }
+            is IslandState.Compact.Timer -> {
+                _state.value = if (activeTimer != null) IslandState.Compact.Timer(timer) else resolveFallbackState()
+            }
+            IslandState.Idle -> {
+                if (activeTimer != null) {
+                    _state.value = IslandState.Compact.Timer(timer)
+                }
+            }
+            else -> Unit
         }
     }
 
     /**
-     * User tapped the island pill.
+     * User tapped the compact island pill.
+     * Primary action: Launch originating app. If no launch handler or fails, expand card.
      */
     fun onPillClicked() {
         when (val current = _state.value) {
             is IslandState.Compact.Media -> {
-                autoDismissJob?.cancel()
-                _state.value = IslandState.Expanded.Media(current.media)
+                val launched = appLaunchHandler?.invoke(current.media.packageName) ?: false
+                if (!launched) {
+                    expand()
+                }
             }
             is IslandState.Compact.Notification -> {
-                autoDismissJob?.cancel()
-                _state.value = IslandState.Expanded.Notification(current.notification)
+                val launched = appLaunchHandler?.invoke(current.notification.packageName) ?: false
+                if (!launched) {
+                    expand()
+                }
             }
             is IslandState.Compact.Battery -> {
-                autoDismissJob?.cancel()
-                _state.value = IslandState.Expanded.Battery(current.battery)
+                val launched = appLaunchHandler?.invoke("com.android.settings") ?: false
+                if (!launched) {
+                    expand()
+                }
             }
             is IslandState.Compact.Timer -> {
-                autoDismissJob?.cancel()
-                _state.value = IslandState.Expanded.Timer(current.timer)
+                val launched = appLaunchHandler?.invoke("com.google.android.deskclock") ?: false
+                if (!launched) {
+                    expand()
+                }
             }
             is IslandState.Expanded -> {
                 collapse()
             }
             IslandState.Idle -> {
-                // If there is background media, resurrect it
                 currentMedia?.let {
+                    dismissedMediaKey = null
                     _state.value = IslandState.Compact.Media(it)
                 }
             }
@@ -141,14 +207,41 @@ class IslandStateManager(
     }
 
     /**
-     * User long pressed the island pill.
+     * User long-pressed the pill or swiped down -> Expand into full interactive card.
      */
     fun onPillLongClicked() {
-        onPillClicked()
+        expand()
     }
 
     /**
-     * User swiped away or tapped outside to collapse.
+     * Expand the currently active activity into a rich interactive card.
+     */
+    fun expand() {
+        autoDismissJob?.cancel()
+        when (val current = _state.value) {
+            is IslandState.Compact.Media -> {
+                _state.value = IslandState.Expanded.Media(current.media)
+            }
+            is IslandState.Compact.Notification -> {
+                _state.value = IslandState.Expanded.Notification(current.notification)
+            }
+            is IslandState.Compact.Battery -> {
+                _state.value = IslandState.Expanded.Battery(current.battery)
+            }
+            is IslandState.Compact.Timer -> {
+                _state.value = IslandState.Expanded.Timer(current.timer)
+            }
+            IslandState.Idle -> {
+                currentMedia?.let {
+                    _state.value = IslandState.Expanded.Media(it)
+                }
+            }
+            else -> Unit
+        }
+    }
+
+    /**
+     * Collapse back from expanded card to compact pill or idle.
      */
     fun collapse() {
         autoDismissJob?.cancel()
@@ -156,10 +249,14 @@ class IslandStateManager(
     }
 
     /**
-     * User swiped horizontally to dismiss completely.
+     * User swiped to dismiss the island completely.
+     * Records dismissal key so the same track doesn't immediately resurrect on position ticks.
      */
     fun onDismissSwiped() {
         autoDismissJob?.cancel()
+        currentMedia?.let {
+            dismissedMediaKey = "${it.packageName}:${it.title}"
+        }
         _state.value = IslandState.Idle
     }
 
@@ -175,7 +272,7 @@ class IslandStateManager(
             return IslandState.Compact.Timer(timer)
         }
         val media = currentMedia
-        if (media != null && media.isPlaying) {
+        if (media != null && media.isPlaying && "${media.packageName}:${media.title}" != dismissedMediaKey) {
             return IslandState.Compact.Media(media)
         }
         return IslandState.Idle

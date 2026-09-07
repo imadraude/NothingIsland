@@ -17,3 +17,4 @@ An ultra-fluid, native Android Dynamic Island crafted specifically for the **Not
 ## Building & Running
 - **Unit Tests**: Run `./gradlew testReleaseUnitTest`
 - **Build APK**: Run `./gradlew assembleRelease` or push to GitHub to build automatically via GitHub Actions (`.github/workflows/build.yml`).
+- **Device Deployment (Shizuku)**: Install and update the APK directly on device via `rish -c "pm install -r app/build/outputs/apk/release/app-release.apk"`.

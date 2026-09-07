@@ -5,6 +5,23 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.3.0] - 2026-09-07
+### Changed & Improved
+- **Motion & Fluid Physics**:
+  - Replaced desynchronized independent `animateDpAsState` calls with a single unified `updateTransition` in `NothingIslandRoot`, keeping width, height, margins, and corner radius in mathematical harmony.
+  - Fine-tuned Apple Fluid spring physics: critically damped settle (`dampingRatio = 1.0f`) on collapse and organic fluid overshoot (`dampingRatio = 0.82f`, `stiffness = Spring.StiffnessMedium`) on expand.
+  - Implemented true 1:1 direct manipulation drag gestures with progressive rubber-band damping on vertical and horizontal axes, accompanied by smooth spring settle upon release.
+  - Synchronized WindowManager overlay resize lifecycle with Compose spring transitions to eliminate view clipping and flickering when collapsing or returning to Idle.
+- **State Engine & Interaction Logic**:
+  - Implemented non-destructive priority arbitration in `IslandStateManager`: background battery, notification, or volume HUDs no longer collapse an actively expanded card in the user's face.
+  - Refined gesture semantics to match Apple Dynamic Island: short tap on compact pill directly launches the active app (Spotify, Telegram, Settings, Clock), while long press or swipe down smoothly expands the interactive card.
+  - Added smart track dismissal suppression: swiping away a playing media track keeps the island dismissed until a new track or artist starts.
+  - Added tap-outside-to-collapse support for the overlay service.
+- **Nothing OS Visual Polish & Industrial Look**:
+  - Redesigned `NdotVisualizer` into an authentic dot-matrix equalizer where individual circular LED dots dynamically illuminate based on waveform amplitudes.
+  - Added interactive media scrubber (seek bar) to `ExpandedCardContent` with live dragging time preview and audio transport controls.
+  - Refined typography, album art borders, and Nothing Red accents for high OLED contrast.
+
 ## [0.2.5] - 2026-09-07
 ### Fixed
 - Fixed critical cutout position bug: `IslandOverlayService` and `IslandApplication.applyLiveCutoutDetection` now strictly preserve factory-calibrated hardware profiles, preventing live WindowInsets from overwriting calibrated coordinates with unadjusted raw cutout values.

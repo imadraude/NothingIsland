@@ -1,5 +1,14 @@
 package com.nothingisland.app.ui.components
 
+import androidx.compose.foundation.clickable
+import androidx.compose.material.icons.filled.OpenInNew
+import androidx.compose.material3.Slider
+import androidx.compose.material3.SliderDefaults
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
@@ -46,6 +55,7 @@ import com.nothingisland.app.core.IslandStateManager
 import com.nothingisland.app.model.CutoutConfig
 import com.nothingisland.app.model.IslandState
 import com.nothingisland.app.ui.theme.NothingCardBorder
+import com.nothingisland.app.ui.theme.NothingDarkSurface
 import com.nothingisland.app.ui.theme.NothingGrey
 import com.nothingisland.app.ui.theme.NothingRed
 import com.nothingisland.app.ui.theme.NothingSubtleGrey
@@ -72,23 +82,37 @@ fun ExpandedCardContent(
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
-            // Left of camera: App category / source
-            Text(
-                text = when (state) {
-                    is IslandState.Expanded.Media -> state.media.appName.uppercase()
-                    is IslandState.Expanded.Notification -> state.notification.packageName.split(".").lastOrNull()?.uppercase() ?: "ALERT"
-                    is IslandState.Expanded.Battery -> "POWER"
-                    is IslandState.Expanded.Timer -> "TIMER"
-                },
-                color = NothingGrey,
-                fontSize = 10.sp,
-                fontWeight = FontWeight.Bold,
-                fontFamily = FontFamily.Monospace,
-                letterSpacing = 1.5.sp,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-                modifier = Modifier.weight(1f)
-            )
+            // Left of camera: App category / source + quick launch
+            Row(
+                modifier = Modifier
+                    .weight(1f)
+                    .clip(RoundedCornerShape(4.dp))
+                    .clickable { stateManager.onPillClicked() },
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = when (state) {
+                        is IslandState.Expanded.Media -> state.media.appName.uppercase()
+                        is IslandState.Expanded.Notification -> state.notification.packageName.split(".").lastOrNull()?.uppercase() ?: "ALERT"
+                        is IslandState.Expanded.Battery -> "POWER"
+                        is IslandState.Expanded.Timer -> "TIMER"
+                    },
+                    color = NothingGrey,
+                    fontSize = 10.sp,
+                    fontWeight = FontWeight.Bold,
+                    fontFamily = FontFamily.Monospace,
+                    letterSpacing = 1.2.sp,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+                Spacer(modifier = Modifier.width(4.dp))
+                Icon(
+                    imageVector = Icons.Default.OpenInNew,
+                    contentDescription = "Open app",
+                    tint = NothingGrey,
+                    modifier = Modifier.size(10.dp)
+                )
+            }
 
             // Clear camera cutout exclusion zone
             Spacer(modifier = Modifier.width((config.cameraDiameterDp + 16f).dp))
@@ -146,7 +170,7 @@ private fun MediaExpandedBody(
 
     Column(
         modifier = Modifier.fillMaxWidth(),
-        verticalArrangement = Arrangement.spacedBy(8.dp)
+        verticalArrangement = Arrangement.spacedBy(6.dp)
     ) {
         // Track info row
         Row(
@@ -159,14 +183,15 @@ private fun MediaExpandedBody(
                     bitmap = art.asImageBitmap(),
                     contentDescription = null,
                     modifier = Modifier
-                        .size(46.dp)
-                        .clip(RoundedCornerShape(10.dp)),
+                        .size(48.dp)
+                        .clip(RoundedCornerShape(10.dp))
+                        .background(NothingDarkSurface),
                     contentScale = ContentScale.Crop
                 )
             } else {
                 Box(
                     modifier = Modifier
-                        .size(46.dp)
+                        .size(48.dp)
                         .clip(RoundedCornerShape(10.dp))
                         .background(NothingSubtleGrey),
                     contentAlignment = Alignment.Center
@@ -211,32 +236,47 @@ private fun MediaExpandedBody(
             )
         }
 
-        // Progress bar and timestamps
+        // Interactive Progress bar & Scrubber
         if (media.durationMs > 0) {
-            val progress = (media.positionMs.toFloat() / media.durationMs).coerceIn(0f, 1f)
+            var isScrubbing by remember { mutableStateOf(false) }
+            var scrubPos by remember { mutableFloatStateOf(0f) }
+            val currentPosMs = if (isScrubbing) scrubPos.toLong() else media.positionMs
+            val progress = (currentPosMs.toFloat() / media.durationMs).coerceIn(0f, 1f)
+
             Column(modifier = Modifier.fillMaxWidth()) {
-                LinearProgressIndicator(
-                    progress = { progress },
+                Slider(
+                    value = progress,
+                    onValueChange = { frac ->
+                        isScrubbing = true
+                        scrubPos = frac * media.durationMs
+                    },
+                    onValueChangeFinished = {
+                        stateManager.seekMedia(scrubPos.toLong())
+                        isScrubbing = false
+                    },
+                    colors = SliderDefaults.colors(
+                        thumbColor = NothingRed,
+                        activeTrackColor = NothingRed,
+                        inactiveTrackColor = NothingCardBorder
+                    ),
                     modifier = Modifier
                         .fillMaxWidth()
-                        .height(3.dp)
-                        .clip(RoundedCornerShape(2.dp)),
-                    color = NothingRed,
-                    trackColor = NothingCardBorder
+                        .height(22.dp)
                 )
-                Spacer(modifier = Modifier.height(3.dp))
                 Row(
-                    modifier = Modifier.fillMaxWidth(),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 2.dp),
                     horizontalArrangement = Arrangement.SpaceBetween
                 ) {
                     Text(
-                        text = formatTime(media.positionMs),
+                        text = formatTime(currentPosMs),
                         color = NothingGrey,
                         fontSize = 10.sp,
                         fontFamily = FontFamily.Monospace
                     )
                     Text(
-                        text = "-${formatTime((media.durationMs - media.positionMs).coerceAtLeast(0L))}",
+                        text = "-${formatTime((media.durationMs - currentPosMs).coerceAtLeast(0L))}",
                         color = NothingGrey,
                         fontSize = 10.sp,
                         fontFamily = FontFamily.Monospace
@@ -265,7 +305,7 @@ private fun MediaExpandedBody(
 
             Box(
                 modifier = Modifier
-                    .size(40.dp)
+                    .size(42.dp)
                     .clip(CircleShape)
                     .background(NothingWhite),
                 contentAlignment = Alignment.Center
@@ -274,13 +314,13 @@ private fun MediaExpandedBody(
                     onClick = {
                         if (media.isPlaying) stateManager.pauseMedia() else stateManager.playMedia()
                     },
-                    modifier = Modifier.size(40.dp)
+                    modifier = Modifier.size(42.dp)
                 ) {
                     Icon(
                         imageVector = if (media.isPlaying) Icons.Default.Pause else Icons.Default.PlayArrow,
                         contentDescription = if (media.isPlaying) "Pause" else "Play",
                         tint = Color.Black,
-                        modifier = Modifier.size(20.dp)
+                        modifier = Modifier.size(22.dp)
                     )
                 }
             }

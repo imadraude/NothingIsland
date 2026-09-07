@@ -1,11 +1,15 @@
 package com.nothingisland.app.ui.components
 
 import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.Spring
-import androidx.compose.animation.core.animateDpAsState
+import androidx.compose.animation.core.animateDp
 import androidx.compose.animation.core.spring
+import androidx.compose.animation.core.updateTransition
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
+import androidx.compose.animation.scaleIn
+import androidx.compose.animation.scaleOut
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -18,15 +22,16 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.unit.dp
 import com.nothingisland.app.core.IslandStateManager
@@ -34,11 +39,13 @@ import com.nothingisland.app.model.CutoutConfig
 import com.nothingisland.app.model.IslandState
 import com.nothingisland.app.ui.theme.NothingBlack
 import com.nothingisland.app.ui.theme.NothingCardBorder
+import kotlinx.coroutines.launch
+import kotlin.math.abs
 
 /**
  * Root Composable for Nothing Phone (2a) Dynamic Island.
- * Implements Apple Fluid Motion via Jetpack Compose Spring physics,
- * pure OLED black camouflage for the centered punch-hole camera,
+ * Implements Apple Fluid Motion via Jetpack Compose unified Transition and Spring physics,
+ * 1:1 direct manipulation gesture tracking with rubber-banding,
  * and Nothing OS industrial aesthetics.
  */
 @Composable
@@ -49,76 +56,106 @@ fun NothingIslandRoot(
     modifier: Modifier = Modifier
 ) {
     val state by stateManager.state.collectAsState()
+    val scope = rememberCoroutineScope()
 
-    // Dimensions derived from current state
-    val targetWidth = when (state) {
-        is IslandState.Idle -> config.cameraDiameterDp.dp
-        is IslandState.Compact.Media -> config.compactMediaWidthDp.dp
-        is IslandState.Compact.Notification -> config.compactNotifWidthDp.dp
-        is IslandState.Compact.Battery -> config.compactBatteryWidthDp.dp
-        is IslandState.Compact.Timer -> config.compactTimerWidthDp.dp
-        is IslandState.Compact.Volume -> config.compactVolumeWidthDp.dp
-        is IslandState.Compact -> config.compactPillWidthDp.dp
-        is IslandState.Expanded -> config.expandedCardWidthDp.dp
+    // Unified coordinated transition — all dimensions animate together without desynchronization
+    val transition = updateTransition(targetState = state, label = "IslandMotionTransition")
+
+    // Notify state manager when animation is fully settled
+    val isSettled = transition.currentState == transition.targetState
+    LaunchedEffect(isSettled) {
+        stateManager.setTransitionSettled(isSettled)
     }
 
-    val targetHeight = when (state) {
-        is IslandState.Idle -> config.cameraDiameterDp.dp
-        is IslandState.Compact -> config.compactPillHeightDp.dp
-        is IslandState.Expanded -> config.expandedCardHeightDp.dp
-    }
-
-    val targetCornerRadius = when (state) {
-        is IslandState.Idle -> (config.cameraDiameterDp / 2f).dp
-        is IslandState.Compact -> (config.compactPillHeightDp / 2f).dp
-        is IslandState.Expanded -> 28.dp
-    }
-
-    val targetTopMargin = when (state) {
-        is IslandState.Idle -> config.cameraTopMarginDp.dp
-        is IslandState.Compact -> config.pillTopMarginDp.dp
-        is IslandState.Expanded -> config.pillTopMarginDp.dp
-    }
-
-    // Apple-style interruptible spring physics
-    val animatedWidth by animateDpAsState(
-        targetValue = targetWidth,
-        animationSpec = spring(
-            dampingRatio = 0.78f,
-            stiffness = Spring.StiffnessMediumLow
-        ),
+    val animatedWidth by transition.animateDp(
+        transitionSpec = {
+            when {
+                targetState is IslandState.Idle -> spring(
+                    dampingRatio = 1.0f,
+                    stiffness = Spring.StiffnessMedium
+                )
+                targetState is IslandState.Expanded -> spring(
+                    dampingRatio = 0.82f,
+                    stiffness = Spring.StiffnessMedium
+                )
+                else -> spring(
+                    dampingRatio = 0.86f,
+                    stiffness = Spring.StiffnessMedium
+                )
+            }
+        },
         label = "IslandWidth"
-    )
+    ) { s ->
+        when (s) {
+            is IslandState.Idle -> config.cameraDiameterDp.dp
+            is IslandState.Compact.Media -> config.compactMediaWidthDp.dp
+            is IslandState.Compact.Notification -> config.compactNotifWidthDp.dp
+            is IslandState.Compact.Battery -> config.compactBatteryWidthDp.dp
+            is IslandState.Compact.Timer -> config.compactTimerWidthDp.dp
+            is IslandState.Compact.Volume -> config.compactVolumeWidthDp.dp
+            is IslandState.Compact -> config.compactPillWidthDp.dp
+            is IslandState.Expanded -> config.expandedCardWidthDp.dp
+        }
+    }
 
-    val animatedHeight by animateDpAsState(
-        targetValue = targetHeight,
-        animationSpec = spring(
-            dampingRatio = 0.78f,
-            stiffness = Spring.StiffnessMediumLow
-        ),
+    val animatedHeight by transition.animateDp(
+        transitionSpec = {
+            when {
+                targetState is IslandState.Idle -> spring(
+                    dampingRatio = 1.0f,
+                    stiffness = Spring.StiffnessMedium
+                )
+                targetState is IslandState.Expanded -> spring(
+                    dampingRatio = 0.82f,
+                    stiffness = Spring.StiffnessMedium
+                )
+                else -> spring(
+                    dampingRatio = 0.86f,
+                    stiffness = Spring.StiffnessMedium
+                )
+            }
+        },
         label = "IslandHeight"
-    )
+    ) { s ->
+        when (s) {
+            is IslandState.Idle -> config.cameraDiameterDp.dp
+            is IslandState.Compact -> config.compactPillHeightDp.dp
+            is IslandState.Expanded -> config.expandedCardHeightDp.dp
+        }
+    }
 
-    val animatedTopMargin by animateDpAsState(
-        targetValue = targetTopMargin,
-        animationSpec = spring(
-            dampingRatio = 0.78f,
-            stiffness = Spring.StiffnessMediumLow
-        ),
+    val animatedTopMargin by transition.animateDp(
+        transitionSpec = {
+            spring(dampingRatio = 1.0f, stiffness = Spring.StiffnessMedium)
+        },
         label = "IslandTopMargin"
-    )
+    ) { s ->
+        when (s) {
+            is IslandState.Idle -> config.cameraTopMarginDp.dp
+            is IslandState.Compact, is IslandState.Expanded -> config.pillTopMarginDp.dp
+        }
+    }
 
-    val animatedCornerRadius by animateDpAsState(
-        targetValue = targetCornerRadius,
-        animationSpec = spring(
-            dampingRatio = 0.85f,
-            stiffness = Spring.StiffnessMediumLow
-        ),
+    val animatedCornerRadius by transition.animateDp(
+        transitionSpec = {
+            when {
+                targetState is IslandState.Idle -> spring(dampingRatio = 1.0f, stiffness = Spring.StiffnessMedium)
+                targetState is IslandState.Expanded -> spring(dampingRatio = 0.85f, stiffness = Spring.StiffnessMedium)
+                else -> spring(dampingRatio = 0.90f, stiffness = Spring.StiffnessMedium)
+            }
+        },
         label = "IslandCornerRadius"
-    )
+    ) { s ->
+        when (s) {
+            is IslandState.Idle -> (config.cameraDiameterDp / 2f).dp
+            is IslandState.Compact -> (config.compactPillHeightDp / 2f).dp
+            is IslandState.Expanded -> 28.dp
+        }
+    }
 
-    var dragOffsetY by remember { mutableFloatStateOf(0f) }
-    var dragOffsetX by remember { mutableFloatStateOf(0f) }
+    // Direct manipulation drag physics
+    val dragOffsetX = remember { Animatable(0f) }
+    val dragOffsetY = remember { Animatable(0f) }
 
     Box(
         modifier = modifier
@@ -126,10 +163,14 @@ fun NothingIslandRoot(
                 x = if (applyHorizontalCutoutOffset) config.cameraCenterXOffsetDp.dp else 0.dp,
                 y = animatedTopMargin
             )
+            .graphicsLayer {
+                translationX = dragOffsetX.value
+                translationY = dragOffsetY.value
+            }
             .width(animatedWidth)
             .height(animatedHeight)
             .shadow(
-                elevation = if (state is IslandState.Expanded) 12.dp else 0.dp,
+                elevation = if (state is IslandState.Expanded) 14.dp else 0.dp,
                 shape = RoundedCornerShape(animatedCornerRadius)
             )
             .clip(RoundedCornerShape(animatedCornerRadius))
@@ -149,17 +190,54 @@ fun NothingIslandRoot(
                 detectDragGestures(
                     onDrag = { change, dragAmount ->
                         change.consume()
-                        dragOffsetX += dragAmount.x
-                        dragOffsetY += dragAmount.y
+                        scope.launch {
+                            val newX = dragOffsetX.value + dragAmount.x
+                            val newY = dragOffsetY.value + dragAmount.y
+                            // Rubber-band damping
+                            val dampedY = if (state is IslandState.Compact && newY < 0) {
+                                newY * 0.25f
+                            } else if (state is IslandState.Expanded && newY > 0) {
+                                newY * 0.25f
+                            } else {
+                                newY
+                            }
+                            dragOffsetX.snapTo(newX)
+                            dragOffsetY.snapTo(dampedY)
+                        }
                     },
                     onDragEnd = {
-                        if (dragOffsetY < -40f || Math.abs(dragOffsetX) > 80f) {
-                            stateManager.onDismissSwiped()
-                        } else if (state is IslandState.Expanded && dragOffsetY > 40f) {
-                            stateManager.collapse()
+                        val finalY = dragOffsetY.value
+                        val finalX = dragOffsetX.value
+                        when (state) {
+                            is IslandState.Compact -> {
+                                if (finalY > 36f) {
+                                    stateManager.expand()
+                                } else if (abs(finalX) > 65f) {
+                                    stateManager.onDismissSwiped()
+                                }
+                            }
+                            is IslandState.Expanded -> {
+                                if (finalY < -40f) {
+                                    stateManager.collapse()
+                                }
+                            }
+                            else -> Unit
                         }
-                        dragOffsetX = 0f
-                        dragOffsetY = 0f
+                        // Smooth spring back to anchor
+                        scope.launch {
+                            launch {
+                                dragOffsetX.animateTo(
+                                    targetValue = 0f,
+                                    animationSpec = spring(dampingRatio = 0.8f, stiffness = Spring.StiffnessMedium)
+                                )
+                            }
+                            launch {
+                                dragOffsetY.animateTo(
+                                    targetValue = 0f,
+                                    animationSpec = spring(dampingRatio = 0.8f, stiffness = Spring.StiffnessMedium)
+                                )
+                            }
+                        }
                     }
                 )
             },
@@ -168,10 +246,12 @@ fun NothingIslandRoot(
         AnimatedContent(
             targetState = state,
             transitionSpec = {
-                fadeIn(animationSpec = spring(stiffness = Spring.StiffnessHigh)) togetherWith
-                fadeOut(animationSpec = spring(stiffness = Spring.StiffnessHigh))
+                (fadeIn(animationSpec = spring(stiffness = Spring.StiffnessMedium)) +
+                 scaleIn(initialScale = 0.92f, animationSpec = spring(stiffness = Spring.StiffnessMedium))) togetherWith
+                (fadeOut(animationSpec = spring(stiffness = Spring.StiffnessHigh)) +
+                 scaleOut(targetScale = 0.92f, animationSpec = spring(stiffness = Spring.StiffnessHigh)))
             },
-            label = "IslandContentTransition"
+            label = "IslandContentMorph"
         ) { targetState ->
             when (targetState) {
                 is IslandState.Idle -> {

@@ -72,25 +72,32 @@ fun NdotVisualizer(
     )
 
     val heights = listOf(bar1, bar2, bar3, bar4)
+    val dotsPerBar = 4
 
     Canvas(modifier = modifier.size(size)) {
-        val barWidth = 2.5.dp.toPx()
-        val spacing = (size.toPx() - (barCount * barWidth)) / (barCount - 1).coerceAtLeast(1)
-        val maxHeight = size.toPx()
+        val totalWidth = size.toPx()
+        val totalHeight = size.toPx()
+        val dotDiameter = (totalWidth / (barCount * 1.6f)).coerceIn(2.5.dp.toPx(), 4.5.dp.toPx())
+        val colSpacing = (totalWidth - (barCount * dotDiameter)) / (barCount - 1).coerceAtLeast(1)
+        val rowSpacing = (totalHeight - (dotsPerBar * dotDiameter)) / (dotsPerBar - 1).coerceAtLeast(1)
 
-        for (i in 0 until barCount) {
-            val hFactor = if (isPlaying) heights[i % heights.size] else 0.25f
-            val currentHeight = (maxHeight * hFactor).coerceAtLeast(barWidth)
-            val startX = i * (barWidth + spacing) + (barWidth / 2)
-            val startY = (maxHeight - currentHeight) / 2
-            val endY = startY + currentHeight
+        for (col in 0 until barCount) {
+            val hFactor = if (isPlaying) heights[col % heights.size] else 0.25f
+            val cx = col * (dotDiameter + colSpacing) + (dotDiameter / 2f)
 
-            drawLine(
-                color = activeColor,
-                start = Offset(startX, startY),
-                end = Offset(startX, endY),
-                strokeWidth = barWidth
-            )
+            for (row in 0 until dotsPerBar) {
+                // row 0 is bottom, row (dotsPerBar - 1) is top
+                val invertedRow = (dotsPerBar - 1) - row
+                val cy = invertedRow * (dotDiameter + rowSpacing) + (dotDiameter / 2f)
+                val rowThreshold = row.toFloat() / (dotsPerBar - 1).coerceAtLeast(1)
+                val isActive = hFactor >= rowThreshold
+
+                drawCircle(
+                    color = if (isActive) activeColor else activeColor.copy(alpha = 0.18f),
+                    radius = dotDiameter / 2f,
+                    center = Offset(cx, cy)
+                )
+            }
         }
     }
 }
