@@ -5,6 +5,16 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.2.2] - 2026-09-07
+### Fixed
+- Fixed critical cutout coordinate displacement in `CameraCutoutDetector`: removed incorrect `viewLocationOnScreen` offset for vector `cutoutPath` which was doubling the screen position and shifting the overlay 166dp off-screen.
+- Added permission guard to System Overlay Master Switch in `MainActivity`: prompts user to grant `SYSTEM_ALERT_WINDOW` permission before starting service, preventing crashes.
+- Added `DisposableEffect` with `Lifecycle.Event.ON_RESUME` observer in `MainActivity` to automatically refresh permission status upon returning from system settings.
+- Linked Master Switch to reactive `IslandOverlayService.isRunning` StateFlow, ensuring switch accurately reflects background service status.
+- Added immediate activation feedback: switching the toggle on now displays a spring-animated `"Nothing Island: Active & Calibrated"` pill over the punch-hole.
+- Dynamically registered `BatteryStateReceiver` within `IslandOverlayService` lifecycle, restoring battery HUD upon plugging into charger.
+- Hardened `IslandOverlayService` with try-catch error boundaries and added `ServiceInfo.FOREGROUND_SERVICE_TYPE_SPECIAL_USE` for Android 14+ compatibility.
+
 ## [0.2.1] - 2026-09-07
 ### Fixed
 - Fixed camera cutout coordinate distortion in floating overlay window by translating window insets with `viewLocationOnScreen`, resolving the horizontal offset bug.

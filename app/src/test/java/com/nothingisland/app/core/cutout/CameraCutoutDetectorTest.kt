@@ -213,4 +213,17 @@ class CameraCutoutDetectorTest {
         assertEquals(25.5f, bounds.top, 0.01f)
         assertEquals(84f, bounds.width, 0.01f)
     }
+
+    @Test
+    fun buildConfigFromRawBounds_centeredDisplayCutout_remainsZeroOffset() {
+        val density = 3.0f
+        val displayWidth = 1080
+        // Physical cutout is centered on screen: 498px to 582px (center = 540px)
+        val rawBounds = CutoutRawBounds(left = 498f, top = 27f, right = 582f, bottom = 111f)
+        val config = CameraCutoutDetector.buildConfigFromRawBounds(rawBounds, displayWidth, density)
+
+        // Must remain exactly 0f without any drift
+        assertEquals(0f, config.cameraCenterXOffsetDp, 0.0f)
+        assertEquals(28f, config.cameraDiameterDp, 0.01f)
+    }
 }

@@ -43,6 +43,7 @@ import androidx.compose.material3.Switch
 import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -50,6 +51,9 @@ import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -104,12 +108,26 @@ class MainActivity : ComponentActivity() {
 @Composable
 fun MainScreen() {
     val context = LocalContext.current
+    val lifecycleOwner = LocalLifecycleOwner.current
 
     var hasOverlayPermission by remember { mutableStateOf(Settings.canDrawOverlays(context)) }
     var hasNotificationPermission by remember {
         mutableStateOf(isNotificationServiceEnabled(context))
     }
-    var isServiceRunning by remember { mutableStateOf(false) }
+    val isServiceRunning by IslandOverlayService.isRunning.collectAsState()
+
+    DisposableEffect(lifecycleOwner) {
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_RESUME) {
+                hasOverlayPermission = Settings.canDrawOverlays(context)
+                hasNotificationPermission = isNotificationServiceEnabled(context)
+            }
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose {
+            lifecycleOwner.lifecycle.removeObserver(observer)
+        }
+    }
 
     // Calibration settings for Nothing Phone (2a)
     var topMargin by remember { mutableFloatStateOf(IslandApplication.cutoutConfig.cameraTopMarginDp) }
@@ -333,11 +351,28 @@ fun MainScreen() {
                 Switch(
                     checked = isServiceRunning,
                     onCheckedChange = { start ->
-                        isServiceRunning = start
-                        val intent = Intent(context, IslandOverlayService::class.java)
                         if (start) {
+                            if (!Settings.canDrawOverlays(context)) {
+                                val intent = Intent(
+                                    Settings.ACTION_MANAGE_OVERLAY_PERMISSION,
+                                    Uri.parse("package:${context.packageName}")
+                                )
+                                context.startActivity(intent)
+                                return@Switch
+                            }
+                            val intent = Intent(context, IslandOverlayService::class.java)
                             ContextCompat.startForegroundService(context, intent)
+                            // Provide immediate delightful feedback that the island is active and calibrated
+                            IslandApplication.stateManager.postEvent(
+                                IslandEvent.Notification(
+                                    key = "island_activation",
+                                    packageName = context.packageName,
+                                    title = "Nothing Island",
+                                    text = "Active & Calibrated"
+                                )
+                            )
                         } else {
+                            val intent = Intent(context, IslandOverlayService::class.java)
                             context.stopService(intent)
                         }
                     },

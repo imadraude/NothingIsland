@@ -5,6 +5,8 @@ import android.app.PendingIntent
 import android.app.Service
 import android.content.Context
 import android.content.Intent
+import android.content.IntentFilter
+import android.content.pm.ServiceInfo
 import android.content.res.Configuration
 import android.graphics.PixelFormat
 import android.os.Build
@@ -28,6 +30,7 @@ import com.nothingisland.app.IslandApplication
 import com.nothingisland.app.R
 import com.nothingisland.app.core.cutout.CameraCutoutDetector
 import com.nothingisland.app.model.IslandState
+import com.nothingisland.app.receiver.BatteryStateReceiver
 import com.nothingisland.app.ui.MainActivity
 import com.nothingisland.app.ui.components.NothingIslandRoot
 import com.nothingisland.app.ui.theme.NothingIslandTheme
@@ -35,26 +38,48 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.launch
 
 class IslandOverlayService : Service() {
 
+    companion object {
+        private val _isRunning = MutableStateFlow(false)
+        val isRunning: StateFlow<Boolean> = _isRunning.asStateFlow()
+    }
+
     private lateinit var windowManager: WindowManager
     private var composeView: ComposeView? = null
     private val serviceLifecycleOwner = ServiceLifecycleOwner()
     private val scope = CoroutineScope(Dispatchers.Main + SupervisorJob())
+    private var batteryReceiver: BatteryStateReceiver? = null
 
     override fun onBind(intent: Intent?): IBinder? = null
 
     override fun onCreate() {
         super.onCreate()
+        _isRunning.value = true
         serviceLifecycleOwner.onCreate()
         windowManager = getSystemService(Context.WINDOW_SERVICE) as WindowManager
         startForegroundServiceNotification()
         setupOverlayView()
         observeState()
+        registerBatteryReceiver()
+    }
+
+    private fun registerBatteryReceiver() {
+        try {
+            val receiver = BatteryStateReceiver()
+            val filter = IntentFilter(Intent.ACTION_BATTERY_CHANGED)
+            registerReceiver(receiver, filter)
+            batteryReceiver = receiver
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
     }
 
     private fun startForegroundServiceNotification() {
@@ -72,57 +97,63 @@ class IslandOverlayService : Service() {
             .setOngoing(true)
             .build()
 
-        startForeground(1001, notification)
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            startForeground(1001, notification, ServiceInfo.FOREGROUND_SERVICE_TYPE_SPECIAL_USE)
+        } else {
+            startForeground(1001, notification)
+        }
     }
 
     private fun setupOverlayView() {
-        composeView = ComposeView(this).apply {
-            setViewCompositionStrategy(ViewCompositionStrategy.DisposeOnDetachedFromWindow)
-            setViewTreeLifecycleOwner(serviceLifecycleOwner)
-            setViewTreeSavedStateRegistryOwner(serviceLifecycleOwner)
-            setViewTreeViewModelStoreOwner(serviceLifecycleOwner)
+        try {
+            composeView = ComposeView(this).apply {
+                setViewCompositionStrategy(ViewCompositionStrategy.DisposeOnDetachedFromWindow)
+                setViewTreeLifecycleOwner(serviceLifecycleOwner)
+                setViewTreeSavedStateRegistryOwner(serviceLifecycleOwner)
+                setViewTreeViewModelStoreOwner(serviceLifecycleOwner)
 
-            ViewCompat.setOnApplyWindowInsetsListener(this) { v, insetsCompat ->
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
-                    insetsCompat.toWindowInsets()?.displayCutout?.let { cutout ->
-                        val (displayWidth, displayHeight) =
-                            CameraCutoutDetector.getFullDisplaySize(this@IslandOverlayService)
-                        val location = IntArray(2)
-                        v.getLocationOnScreen(location)
-                        CameraCutoutDetector.detectFromCutout(
-                            context = this@IslandOverlayService,
-                            cutout = cutout,
-                            displayWidth = displayWidth,
-                            displayHeight = displayHeight,
-                            viewLocationOnScreen = location[0] to location[1]
-                        )?.let { detected ->
-                            IslandApplication.applyLiveCutoutDetection(detected)
+                ViewCompat.setOnApplyWindowInsetsListener(this) { _, insetsCompat ->
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+                        insetsCompat.toWindowInsets()?.displayCutout?.let { cutout ->
+                            val (displayWidth, displayHeight) =
+                                CameraCutoutDetector.getFullDisplaySize(this@IslandOverlayService)
+                            CameraCutoutDetector.detectFromCutout(
+                                context = this@IslandOverlayService,
+                                cutout = cutout,
+                                displayWidth = displayWidth,
+                                displayHeight = displayHeight
+                            )?.let { detected ->
+                                IslandApplication.applyLiveCutoutDetection(detected)
+                            }
+                        }
+                    }
+                    insetsCompat
+                }
+
+                setContent {
+                    val config by IslandApplication.cutoutConfigFlow.collectAsState()
+                    NothingIslandTheme {
+                        Box(
+                            modifier = Modifier.fillMaxSize(),
+                            contentAlignment = Alignment.TopCenter
+                        ) {
+                            NothingIslandRoot(
+                                stateManager = IslandApplication.stateManager,
+                                config = config,
+                                applyHorizontalCutoutOffset = false
+                            )
                         }
                     }
                 }
-                insetsCompat
             }
 
-            setContent {
-                val config by IslandApplication.cutoutConfigFlow.collectAsState()
-                NothingIslandTheme {
-                    Box(
-                        modifier = Modifier.fillMaxSize(),
-                        contentAlignment = Alignment.TopCenter
-                    ) {
-                        NothingIslandRoot(
-                            stateManager = IslandApplication.stateManager,
-                            config = config,
-                            applyHorizontalCutoutOffset = false
-                        )
-                    }
-                }
-            }
+            val initialParams = createLayoutParams(IslandState.Idle)
+            windowManager.addView(composeView, initialParams)
+            composeView?.let(ViewCompat::requestApplyInsets)
+        } catch (e: Exception) {
+            e.printStackTrace()
+            stopSelf()
         }
-
-        val initialParams = createLayoutParams(IslandState.Idle)
-        windowManager.addView(composeView, initialParams)
-        composeView?.let(ViewCompat::requestApplyInsets)
     }
 
     private fun observeState() {
@@ -233,9 +264,22 @@ class IslandOverlayService : Service() {
     }
 
     override fun onDestroy() {
+        _isRunning.value = false
+        batteryReceiver?.let {
+            try {
+                unregisterReceiver(it)
+            } catch (e: Exception) {
+                e.printStackTrace()
+            }
+            batteryReceiver = null
+        }
         scope.cancel()
         composeView?.let {
-            windowManager.removeView(it)
+            try {
+                windowManager.removeView(it)
+            } catch (e: Exception) {
+                e.printStackTrace()
+            }
             composeView = null
         }
         serviceLifecycleOwner.onDestroy()

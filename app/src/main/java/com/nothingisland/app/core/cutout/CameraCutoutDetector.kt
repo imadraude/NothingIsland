@@ -263,15 +263,9 @@ object CameraCutoutDetector {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
             val pathBounds = detectFromCutoutPath(cutout, cameraRect)
             if (pathBounds != null) {
-                val translatedBounds = if (viewLocationOnScreen != null) {
-                    CutoutRawBounds(
-                        left = pathBounds.left + viewLocationOnScreen.first,
-                        top = pathBounds.top + viewLocationOnScreen.second,
-                        right = pathBounds.right + viewLocationOnScreen.first,
-                        bottom = pathBounds.bottom + viewLocationOnScreen.second
-                    )
-                } else pathBounds
-                return buildConfigFromRawBounds(translatedBounds, actualDisplayWidth, density)
+                // Note: DisplayCutout.cutoutPath is strictly in display coordinates.
+                // Never add viewLocationOnScreen here to prevent double-offsetting.
+                return buildConfigFromRawBounds(pathBounds, actualDisplayWidth, density)
             }
         }
 
