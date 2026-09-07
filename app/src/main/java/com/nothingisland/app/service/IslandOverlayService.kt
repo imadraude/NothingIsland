@@ -78,34 +78,6 @@ class IslandOverlayService : Service() {
             setViewTreeLifecycleOwner(serviceLifecycleOwner)
             setViewTreeSavedStateRegistryOwner(serviceLifecycleOwner)
             setViewTreeViewModelStoreOwner(serviceLifecycleOwner)
-
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
-                setOnApplyWindowInsetsListener { view, insets ->
-                    val cutout = insets.displayCutout
-                    if (cutout != null) {
-                        val rect = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-                            cutout.boundingRectTop
-                        } else {
-                            cutout.boundingRects.firstOrNull()
-                        }
-                        if (rect != null && !rect.isEmpty) {
-                            val density = view.resources.displayMetrics.density
-                            val screenWidthPx = view.resources.displayMetrics.widthPixels
-                            val topMarginDp = rect.top / density
-                            val diameterDp = (rect.bottom - rect.top) / density
-                            val centerXOffsetDp = (rect.centerX() - (screenWidthPx / 2f)) / density
-
-                            IslandApplication.updateCutout(
-                                topMarginDp = topMarginDp,
-                                diameterDp = diameterDp,
-                                centerXOffsetDp = centerXOffsetDp
-                            )
-                        }
-                    }
-                    insets
-                }
-            }
-
             setContent {
                 val config by IslandApplication.cutoutConfigFlow.collectAsState()
                 NothingIslandTheme {
@@ -158,12 +130,12 @@ class IslandOverlayService : Service() {
                     is IslandState.Compact.Volume -> config.compactVolumeWidthDp
                     is IslandState.Compact.Media -> config.compactMediaWidthDp
                 }
-                val windowW = (targetW + 24f).toInt()
+                val windowW = (targetW + 40f).toInt()
                 val windowH = (config.pillTopMarginDp + config.compactPillHeightDp + 20f).toInt()
                 Triple(windowW, windowH, true)
             }
             is IslandState.Expanded -> {
-                val windowW = (config.expandedCardWidthDp + 24f).toInt()
+                val windowW = (config.expandedCardWidthDp + 40f).toInt()
                 val windowH = (config.pillTopMarginDp + config.expandedCardHeightDp + 24f).toInt()
                 Triple(windowW, windowH, true)
             }
@@ -188,7 +160,7 @@ class IslandOverlayService : Service() {
             PixelFormat.TRANSLUCENT
         ).apply {
             gravity = Gravity.TOP or Gravity.CENTER_HORIZONTAL
-            x = (config.cameraCenterXOffsetDp * density).toInt()
+            x = 0
             y = 0
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
                 layoutInDisplayCutoutMode = WindowManager.LayoutParams.LAYOUT_IN_DISPLAY_CUTOUT_MODE_ALWAYS

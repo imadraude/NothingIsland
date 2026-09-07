@@ -111,7 +111,7 @@ fun NothingIslandRoot(
 
     Box(
         modifier = modifier
-            .offset(y = config.pillTopMarginDp.dp)
+            .offset(x = config.cameraCenterXOffsetDp.dp, y = config.pillTopMarginDp.dp)
             .width(animatedWidth)
             .height(animatedHeight)
             .shadow(

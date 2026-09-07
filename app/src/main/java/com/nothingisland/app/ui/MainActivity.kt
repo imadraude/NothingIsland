@@ -102,16 +102,22 @@ fun MainScreen() {
 
     // Calibration settings for Nothing Phone (2a)
     var topMargin by remember { mutableFloatStateOf(IslandApplication.cutoutConfig.cameraTopMarginDp) }
+    var centerXOffset by remember { mutableFloatStateOf(IslandApplication.cutoutConfig.cameraCenterXOffsetDp) }
+    var pillHeight by remember { mutableFloatStateOf(IslandApplication.cutoutConfig.compactPillHeightDp) }
     var cameraDiameter by remember { mutableFloatStateOf(IslandApplication.cutoutConfig.cameraDiameterDp) }
     var compactWidth by remember { mutableFloatStateOf(IslandApplication.cutoutConfig.compactPillWidthDp) }
 
     val liveConfig = CutoutConfig(
+        cameraCenterXOffsetDp = centerXOffset,
         cameraTopMarginDp = topMargin,
         cameraDiameterDp = cameraDiameter,
+        compactPillHeightDp = pillHeight,
         compactPillWidthDp = compactWidth,
         compactMediaWidthDp = compactWidth
     )
-    IslandApplication.cutoutConfig = liveConfig
+    LaunchedEffect(liveConfig) {
+        IslandApplication.cutoutConfig = liveConfig
+    }
 
     val scope = rememberCoroutineScope()
     val updateManager = remember { GitHubUpdateManager(context) }
@@ -175,7 +181,7 @@ fun MainScreen() {
                 // Simulated Nothing Phone (2a) Camera Punch-hole
                 Box(
                     modifier = Modifier
-                        .padding(top = topMargin.dp)
+                        .offset(x = centerXOffset.dp, y = topMargin.dp)
                         .size(cameraDiameter.dp)
                         .clip(CircleShape)
                         .background(Color(0xFF080808))
@@ -360,19 +366,38 @@ fun MainScreen() {
         Spacer(modifier = Modifier.height(20.dp))
 
         // Nothing Phone (2a) Precision Calibration
-        Text(
-            text = "CALIBRATION (NOTHING PHONE 2A)",
-            color = NothingWhite,
-            fontSize = 12.sp,
-            fontWeight = FontWeight.Bold,
-            fontFamily = FontFamily.Monospace,
-            modifier = Modifier.align(Alignment.Start)
-        )
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(
+                text = "CALIBRATION (NOTHING 2A)",
+                color = NothingWhite,
+                fontSize = 12.sp,
+                fontWeight = FontWeight.Bold,
+                fontFamily = FontFamily.Monospace
+            )
+            OutlinedButton(
+                onClick = {
+                    IslandApplication.resetToDefaults()
+                    val def = IslandApplication.cutoutConfig
+                    topMargin = def.cameraTopMarginDp
+                    centerXOffset = def.cameraCenterXOffsetDp
+                    pillHeight = def.compactPillHeightDp
+                    cameraDiameter = def.cameraDiameterDp
+                    compactWidth = def.compactPillWidthDp
+                },
+                shape = RoundedCornerShape(6.dp)
+            ) {
+                Text("↺ Reset", color = NothingRed, fontSize = 11.sp)
+            }
+        }
 
-        Spacer(modifier = Modifier.height(12.dp))
+        Spacer(modifier = Modifier.height(10.dp))
 
         Text(
-            text = "Top Margin: ${topMargin.toInt()} dp",
+            text = "Top Margin (Y Offset): ${String.format("%.1f", topMargin)} dp",
             color = NothingGrey,
             fontSize = 12.sp,
             modifier = Modifier.align(Alignment.Start)
@@ -380,7 +405,7 @@ fun MainScreen() {
         Slider(
             value = topMargin,
             onValueChange = { topMargin = it },
-            valueRange = 5f..30f,
+            valueRange = 0f..25f,
             colors = SliderDefaults.colors(
                 thumbColor = NothingRed,
                 activeTrackColor = NothingRed,
@@ -389,7 +414,41 @@ fun MainScreen() {
         )
 
         Text(
-            text = "Camera Cutout Diameter: ${cameraDiameter.toInt()} dp",
+            text = "Horizontal Offset (X): ${String.format("%.1f", centerXOffset)} dp",
+            color = NothingGrey,
+            fontSize = 12.sp,
+            modifier = Modifier.align(Alignment.Start)
+        )
+        Slider(
+            value = centerXOffset,
+            onValueChange = { centerXOffset = it },
+            valueRange = -20f..20f,
+            colors = SliderDefaults.colors(
+                thumbColor = NothingRed,
+                activeTrackColor = NothingRed,
+                inactiveTrackColor = NothingCardBorder
+            )
+        )
+
+        Text(
+            text = "Pill Height: ${pillHeight.toInt()} dp",
+            color = NothingGrey,
+            fontSize = 12.sp,
+            modifier = Modifier.align(Alignment.Start)
+        )
+        Slider(
+            value = pillHeight,
+            onValueChange = { pillHeight = it },
+            valueRange = 34f..48f,
+            colors = SliderDefaults.colors(
+                thumbColor = NothingRed,
+                activeTrackColor = NothingRed,
+                inactiveTrackColor = NothingCardBorder
+            )
+        )
+
+        Text(
+            text = "Camera Hole Diameter: ${cameraDiameter.toInt()} dp",
             color = NothingGrey,
             fontSize = 12.sp,
             modifier = Modifier.align(Alignment.Start)
@@ -397,7 +456,7 @@ fun MainScreen() {
         Slider(
             value = cameraDiameter,
             onValueChange = { cameraDiameter = it },
-            valueRange = 24f..46f,
+            valueRange = 24f..44f,
             colors = SliderDefaults.colors(
                 thumbColor = NothingRed,
                 activeTrackColor = NothingRed,
@@ -414,7 +473,7 @@ fun MainScreen() {
         Slider(
             value = compactWidth,
             onValueChange = { compactWidth = it },
-            valueRange = 120f..240f,
+            valueRange = 140f..240f,
             colors = SliderDefaults.colors(
                 thumbColor = NothingRed,
                 activeTrackColor = NothingRed,

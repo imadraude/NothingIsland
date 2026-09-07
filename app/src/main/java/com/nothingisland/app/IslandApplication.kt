@@ -28,13 +28,10 @@ class IslandApplication : Application() {
                 saveToPrefs(value)
             }
 
-        fun updateCutout(topMarginDp: Float, diameterDp: Float, centerXOffsetDp: Float) {
-            val current = _cutoutConfig.value
-            _cutoutConfig.value = current.copy(
-                cameraTopMarginDp = topMarginDp,
-                cameraDiameterDp = diameterDp,
-                cameraCenterXOffsetDp = centerXOffsetDp
-            )
+        fun resetToDefaults() {
+            val defaults = CutoutConfig()
+            _cutoutConfig.value = defaults
+            saveToPrefs(defaults)
         }
 
         private fun saveToPrefs(config: CutoutConfig) {
@@ -43,6 +40,7 @@ class IslandApplication : Application() {
                 prefs.edit()
                     .putFloat("top_margin", config.cameraTopMarginDp)
                     .putFloat("diameter", config.cameraDiameterDp)
+                    .putFloat("pill_height", config.compactPillHeightDp)
                     .putFloat("compact_width", config.compactPillWidthDp)
                     .putFloat("center_x", config.cameraCenterXOffsetDp)
                     .apply()
@@ -56,11 +54,13 @@ class IslandApplication : Application() {
                 val prefs = instance.getSharedPreferences("cutout_prefs", Context.MODE_PRIVATE)
                 val topMargin = prefs.getFloat("top_margin", 10f)
                 val diameter = prefs.getFloat("diameter", 34f)
+                val pillHeight = prefs.getFloat("pill_height", 40f)
                 val compactWidth = prefs.getFloat("compact_width", 184f)
                 val centerX = prefs.getFloat("center_x", 0f)
                 CutoutConfig(
                     cameraTopMarginDp = topMargin,
                     cameraDiameterDp = diameter,
+                    compactPillHeightDp = pillHeight,
                     compactPillWidthDp = compactWidth,
                     cameraCenterXOffsetDp = centerX
                 )

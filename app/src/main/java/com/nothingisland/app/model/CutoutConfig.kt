@@ -4,10 +4,10 @@ package com.nothingisland.app.model
  * Calibrated dimensions for Nothing Phone (2a) centered punch-hole camera.
  */
 data class CutoutConfig(
-    val cameraCenterXOffsetDp: Float = 0f,
+    val cameraCenterXOffsetDp: Float = 0f,   // Horizontal offset from screen center (0 = dead center)
     val cameraTopMarginDp: Float = 10f,      // Distance from top of screen to top of camera cutout
     val cameraDiameterDp: Float = 34f,       // Hardware camera cutout diameter
-    val compactPillHeightDp: Float = 42f,    // Height of resting pill (34 + 8dp OLED bezel)
+    val compactPillHeightDp: Float = 40f,    // Height of resting pill (cam diameter + 6dp OLED bezel)
     val compactMediaWidthDp: Float = 184f,   // Width for media playback (art + visualizer)
     val compactNotifWidthDp: Float = 240f,   // Width for notification preview
     val compactBatteryWidthDp: Float = 144f, // Width for battery HUD
