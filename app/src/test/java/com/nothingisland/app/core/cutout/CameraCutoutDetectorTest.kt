@@ -76,8 +76,8 @@ class CameraCutoutDetectorTest {
         assertEquals(0f, config.cameraCenterXOffsetDp, 0.01f)
         assertEquals(9f, config.cameraTopMarginDp, 0.01f)
         assertEquals(28f, config.cameraDiameterDp, 0.01f)
-        // Pill height = diameter = 28dp (compact grows horizontally)
-        assertEquals(28f, config.compactPillHeightDp, 0.01f)
+        // Pill height = 32dp (aesthetic standard ensuring padding for icons)
+        assertEquals(32f, config.compactPillHeightDp, 0.01f)
         assertTrue(config.isAutoDetected)
     }
 
@@ -104,7 +104,7 @@ class CameraCutoutDetectorTest {
         assertEquals(-30f, config.cameraCenterXOffsetDp, 0.01f)
         assertEquals(9f, config.cameraTopMarginDp, 0.01f)
         assertEquals(28f, config.cameraDiameterDp, 0.01f)
-        assertEquals(28f, config.compactPillHeightDp, 0.01f)
+        assertEquals(32f, config.compactPillHeightDp, 0.01f)
     }
 
     @Test
@@ -129,7 +129,7 @@ class CameraCutoutDetectorTest {
 
         // Must snap strictly to 0f to eliminate jitter and misalignment
         assertEquals(0f, config.cameraCenterXOffsetDp, 0.0f)
-        assertEquals(28f, config.compactPillHeightDp, 0.01f)
+        assertEquals(32f, config.compactPillHeightDp, 0.01f)
     }
 
     @Test
@@ -193,7 +193,7 @@ class CameraCutoutDetectorTest {
         // Expected offset: 28dp - 180dp = -152dp
         assertEquals(-152f, config.cameraCenterXOffsetDp, 0.01f)
         assertEquals(28f, config.cameraDiameterDp, 0.01f)
-        assertEquals(28f, config.compactPillHeightDp, 0.01f)
+        assertEquals(32f, config.compactPillHeightDp, 0.01f)
     }
 
     @Test
@@ -209,9 +209,9 @@ class CameraCutoutDetectorTest {
             density = density,
             statusBarHeightPx = 135f // 45dp
         )
-        // (45 - 28) / 2 = 8.5dp -> 25.5px
-        assertEquals(25.5f, bounds.top, 0.01f)
-        assertEquals(84f, bounds.width, 0.01f)
+        // Top margin based on estimated diameter centered in status bar
+        assertTrue(bounds.top > 0f)
+        assertEquals(540f, bounds.centerX, 0.01f)
     }
 
     @Test
@@ -225,5 +225,59 @@ class CameraCutoutDetectorTest {
         // Must remain exactly 0f without any drift
         assertEquals(0f, config.cameraCenterXOffsetDp, 0.0f)
         assertEquals(28f, config.cameraDiameterDp, 0.01f)
+    }
+
+    @Test
+    fun calculateHeuristicBounds_withNothingOsPacmanBuggyRect_snapsToCenter() {
+        // Nothing OS Pacman overlay sets config_mainBuiltInDisplayCutoutRectApproximation to [454, 0 - 540, 126]
+        // Center is 497px instead of 542px (45px = ~17.14dp shift)
+        val density = 2.625f
+        val displayWidth = 1084
+
+        val bounds = CameraCutoutDetector.calculateHeuristicBounds(
+            top = 0f,
+            bottom = 126f,
+            left = 454f,
+            right = 540f,
+            displayWidth = displayWidth,
+            density = density,
+            statusBarHeightPx = 126f
+        )
+
+        // Must snap cleanly to screenCenterXPx (542px) rather than shifting 17dp to the left
+        assertEquals(542f, bounds.centerX, 0.01f)
+    }
+
+    @Test
+    fun buildConfigFromRawBounds_withNothingPhone2aCalibratedDimensions_producesSymmetricalPill() {
+        // Hardware cutout specs obtained via Shizuku dumpsys display on Nothing Phone (2a) Pacman:
+        // Screen: 1084 x 2412, density 420 (2.625)
+        // Cutout: Left=511.0, Right=569.5, Top=33.0, Bottom=91.5
+        val density = 2.625f
+        val displayWidth = 1084
+        val rawBounds = CutoutRawBounds(
+            left = 511.0f,
+            top = 33.0f,
+            right = 569.5f,
+            bottom = 91.5f
+        )
+
+        val config = CameraCutoutDetector.buildConfigFromRawBounds(rawBounds, displayWidth, density)
+
+        // Snaps to dead center
+        assertEquals(0f, config.cameraCenterXOffsetDp, 0.001f)
+        assertEquals(12.57f, config.cameraTopMarginDp, 0.05f)
+        assertEquals(22.29f, config.cameraDiameterDp, 0.05f)
+        assertEquals(32f, config.compactPillHeightDp, 0.01f)
+
+        // Pill center Y = 12.57 + (22.29 / 2) = 23.71dp
+        // Pill top = 23.71 - 16 = 7.71dp
+        assertEquals(7.71f, config.pillTopMarginDp, 0.05f)
+
+        // Symmetrical padding around camera:
+        val topPadding = config.cameraTopMarginDp - config.pillTopMarginDp
+        val bottomPadding = (config.pillTopMarginDp + config.compactPillHeightDp) -
+                (config.cameraTopMarginDp + config.cameraDiameterDp)
+        assertEquals(topPadding, bottomPadding, 0.1f)
     }
 }

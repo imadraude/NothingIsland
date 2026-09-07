@@ -5,6 +5,18 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.2.3] - 2026-09-07
+### Fixed
+- Fixed critical cutout clipping & horizontal displacement on Nothing Phone (2a): bypassed OEM bug in `FrameworksResCommon_Sys_Pacman.apk` (`boundingRectTop` truncated at `X=540` rather than covering the full circle `511..569.5px`), eliminating horizontal misplacement.
+- Calibrated hardware cutout parameters via Shizuku (`dumpsys display`):
+  - Diameter: exact `22.3dp` (58.5px at 420 dpi, optical sensor `16.3dp`).
+  - Vertical center: `23.73dp` (62.3px).
+  - Top margin: `12.57dp` (33px).
+  - Status bar height: `48.0dp` (126px).
+- Symmetrically calibrated compact pill height to `32dp`, achieving exact mathematical symmetry around the camera cutout (`4.86dp` top & bottom clearance) and inside the status bar (`7.72dp` top margin, `8.28dp` bottom margin).
+- Expanded dead-center snap threshold to `22dp` in `buildConfigFromRawBounds` and `calculateHeuristicBounds` to prevent OEM bounding-box errors from causing side-to-side jumping.
+- Migrated SharedPreferences to `is_configured_v4` to automatically recalibrate and apply the new coordinates for all users.
+
 ## [0.2.2] - 2026-09-07
 ### Fixed
 - Fixed critical cutout coordinate displacement in `CameraCutoutDetector`: removed incorrect `viewLocationOnScreen` offset for vector `cutoutPath` which was doubling the screen position and shifting the overlay 166dp off-screen.

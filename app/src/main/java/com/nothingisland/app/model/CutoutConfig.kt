@@ -8,9 +8,9 @@ import com.nothingisland.app.core.cutout.CameraCutoutDetector
  */
 data class CutoutConfig(
     val cameraCenterXOffsetDp: Float = 0f,   // Horizontal offset from screen center (0 = dead center)
-    val cameraTopMarginDp: Float = 8f,       // Distance from top of screen to top of camera cutout (~8dp on Nothing 2a)
-    val cameraDiameterDp: Float = 28f,       // Hardware camera cutout diameter (~27-28dp on Nothing 2a)
-    val compactPillHeightDp: Float = 28f,    // Matches the camera height; compact state grows horizontally only
+    val cameraTopMarginDp: Float = 12.57f,   // Distance from top of screen to top of camera cutout (12.57dp on Nothing 2a)
+    val cameraDiameterDp: Float = 22.3f,     // Hardware camera cutout diameter (22.29dp on Nothing 2a)
+    val compactPillHeightDp: Float = 32f,    // Calibrated 32dp height centered over camera and in 48dp status bar
     val compactMediaWidthDp: Float = 144f,   // Sleek compact width for media playback
     val compactNotifWidthDp: Float = 196f,   // Sleek compact width for notification preview
     val compactBatteryWidthDp: Float = 104f, // Sleek compact width for battery HUD

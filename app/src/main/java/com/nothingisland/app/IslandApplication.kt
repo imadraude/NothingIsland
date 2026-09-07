@@ -72,7 +72,7 @@ class IslandApplication : Application() {
             try {
                 val prefs = instance.getSharedPreferences("cutout_prefs", Context.MODE_PRIVATE)
                 val editor = prefs.edit()
-                    .putBoolean("is_configured_v3", true)
+                    .putBoolean("is_configured_v4", true)
                     .putFloat("top_margin", config.cameraTopMarginDp)
                     .putFloat("diameter", config.cameraDiameterDp)
                     .putFloat("pill_height", config.compactPillHeightDp)
@@ -91,7 +91,7 @@ class IslandApplication : Application() {
         fun loadFromPrefs(): CutoutConfig {
             return try {
                 val prefs = instance.getSharedPreferences("cutout_prefs", Context.MODE_PRIVATE)
-                if (!prefs.contains("is_configured_v3")) {
+                if (!prefs.contains("is_configured_v4")) {
                     val detected = CutoutConfig.detectFromSystem(instance) ?: CutoutConfig()
                     saveToPrefs(detected)
                     return detected
@@ -102,9 +102,9 @@ class IslandApplication : Application() {
                         return detected
                     }
                 }
-                val topMargin = prefs.getFloat("top_margin", 8f)
-                val diameter = prefs.getFloat("diameter", 28f)
-                val pillHeight = prefs.getFloat("pill_height", diameter)
+                val topMargin = prefs.getFloat("top_margin", 12.57f)
+                val diameter = prefs.getFloat("diameter", 22.3f)
+                val pillHeight = prefs.getFloat("pill_height", 32f)
                 val compactWidth = prefs.getFloat("compact_width", 144f)
                 val centerX = prefs.getFloat("center_x", 0f)
                 val isAuto = prefs.getBoolean("is_auto_detected", false)
