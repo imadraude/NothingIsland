@@ -5,6 +5,27 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.3.2] - 2026-09-07
+### Added & Improved
+- **Two-Phase Squeeze-and-Bloom Motion Physics ("Схлопування під камеру і вкраплення")**:
+  - Implemented dynamicSpot & Apple-inspired two-phase organic transition when switching contexts (`Media` <-> `Battery` <-> `Alert` / preview buttons):
+    - **Phase 1 (Squeeze / Схлопування)**: Island smoothly collapses inward to the camera punch-hole circle (`cameraDiameterDp` x `cameraDiameterDp`), while old content scales down to `0.38f` and fades out into the camera hole.
+    - **Phase 2 (Bloom / Вкраплення)**: At the camera anchor, state swaps to the new context and springs outward with dynamicSpot's signature `OvershootInterpolator(1.5f)` equivalent spring physics (`dampingRatio = 0.74f, stiffness = Spring.StiffnessMediumLow`), blooming out with new content scaling from `0.38f` to `1.0f`.
+  - Dismissing to Idle softly collapses the island into the camera circle before vanishing.
+  - Expanding/collapsing between Compact and Expanded cards preserves continuous Apple fluid morphing without artificial camera squeeze.
+- **Status Bar Layer Elevation via Accessibility Service (`TYPE_ACCESSIBILITY_OVERLAY`)**:
+  - Implemented `IslandAccessibilityService` running with `WindowManager.LayoutParams.TYPE_ACCESSIBILITY_OVERLAY` (Window Layer 311000).
+  - Elevates the Dynamic Island strictly above the system status bar (Layer 210000) and notification icons, preventing status bar notification icons from drawing over or bleeding through the island.
+  - Added `IslandOverlayCoordinator` to gracefully orchestrate mutual exclusivity between `IslandAccessibilityService` (primary) and `IslandOverlayService` (fallback).
+  - Added Accessibility Service permission management card to `MainActivity`.
+- **Status Bar Safe Clearance Dimension Calibration**:
+  - Calibrated compact widths to fit comfortably within the 180dp status bar safe zone between left-side notification icons and right-side system icons (Wi-Fi/Battery):
+    - `Battery`: 116dp
+    - `Volume`: 116dp
+    - `Timer`: 130dp
+    - `Media`: 152dp
+    - `Notification`: 176dp
+
 ## [0.3.1] - 2026-09-07
 ### Fixed & Improved
 - **Silky-Smooth Compact Transitions & Preview Fix**:

@@ -2,4 +2,6 @@
 <resources>
     <string name="app_name">Nothing Island</string>
     <string name="notification_listener_label">Nothing Island Media &amp; Notifications</string>
+    <string name="accessibility_service_label">Nothing Island Overlay Service</string>
+    <string name="accessibility_service_description">Displays the Dynamic Island overlay above system status bar icons for seamless Nothing OS integration.</string>
 </resources>

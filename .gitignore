@@ -13,3 +13,5 @@ release.keystore
 .impeccable/
 .codex/
 .agents/
+*.apk
+*.dex

@@ -74,6 +74,7 @@ import com.nothingisland.app.ui.components.NothingUpdateDialog
 import kotlinx.coroutines.launch
 import com.nothingisland.app.model.CutoutConfig
 import com.nothingisland.app.model.IslandEvent
+import com.nothingisland.app.service.IslandAccessibilityService
 import com.nothingisland.app.service.IslandNotificationListener
 import com.nothingisland.app.service.IslandOverlayService
 import com.nothingisland.app.ui.components.NothingIslandRoot
@@ -114,6 +115,9 @@ fun MainScreen() {
     var hasNotificationPermission by remember {
         mutableStateOf(isNotificationServiceEnabled(context))
     }
+    var hasAccessibilityPermission by remember {
+        mutableStateOf(isAccessibilityServiceEnabled(context))
+    }
     val isServiceRunning by IslandOverlayService.isRunning.collectAsState()
 
     DisposableEffect(lifecycleOwner) {
@@ -121,6 +125,7 @@ fun MainScreen() {
             if (event == Lifecycle.Event.ON_RESUME) {
                 hasOverlayPermission = Settings.canDrawOverlays(context)
                 hasNotificationPermission = isNotificationServiceEnabled(context)
+                hasAccessibilityPermission = isAccessibilityServiceEnabled(context)
             }
         }
         lifecycleOwner.lifecycle.addObserver(observer)
@@ -142,11 +147,11 @@ fun MainScreen() {
         cameraTopMarginDp = topMargin,
         cameraDiameterDp = cameraDiameter,
         compactPillHeightDp = pillHeight,
-        compactMediaWidthDp = compactWidth,
-        compactNotifWidthDp = (compactWidth + 40f).coerceAtLeast(190f),
-        compactBatteryWidthDp = 120f,
-        compactTimerWidthDp = 136f,
-        compactVolumeWidthDp = 120f,
+        compactMediaWidthDp = 152f,
+        compactNotifWidthDp = 176f,
+        compactBatteryWidthDp = 116f,
+        compactTimerWidthDp = 130f,
+        compactVolumeWidthDp = 116f,
         compactPillWidthDp = compactWidth,
         expandedCardWidthDp = 340f,
         expandedCardHeightDp = 190f,
@@ -437,6 +442,17 @@ fun MainScreen() {
             granted = hasNotificationPermission,
             onRequest = {
                 val intent = Intent(Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS)
+                context.startActivity(intent)
+            }
+        )
+
+        Spacer(modifier = Modifier.height(8.dp))
+
+        PermissionCard(
+            title = "Accessibility Overlay (Above Status Bar)",
+            granted = hasAccessibilityPermission,
+            onRequest = {
+                val intent = Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS)
                 context.startActivity(intent)
             }
         )
@@ -767,4 +783,22 @@ fun isNotificationServiceEnabled(context: Context): Boolean {
     val pkgName = context.packageName
     val flat = Settings.Secure.getString(context.contentResolver, "enabled_notification_listeners")
     return flat != null && flat.contains(pkgName)
+}
+
+fun isAccessibilityServiceEnabled(context: Context): Boolean {
+    val expectedComponentName = ComponentName(context, IslandAccessibilityService::class.java)
+    val enabledServices = Settings.Secure.getString(
+        context.contentResolver,
+        Settings.Secure.ENABLED_ACCESSIBILITY_SERVICES
+    ) ?: return false
+    val colonSplitter = android.text.TextUtils.SimpleStringSplitter(':')
+    colonSplitter.setString(enabledServices)
+    while (colonSplitter.hasNext()) {
+        val componentString = colonSplitter.next()
+        val enabledComponent = ComponentName.unflattenFromString(componentString)
+        if (enabledComponent != null && enabledComponent == expectedComponentName) {
+            return true
+        }
+    }
+    return false
 }
