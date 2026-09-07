@@ -5,6 +5,15 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.2.1] - 2026-09-07
+### Fixed
+- Fixed camera cutout coordinate distortion in floating overlay window by translating window insets with `viewLocationOnScreen`, resolving the horizontal offset bug.
+- Added direct physical display cutout extraction via `DisplayManager` (`display.cutout`), eliminating reliance on attached visual window context.
+- Refined OLED camera camouflage in `Idle` state: reduced overlay window and pill to exact camera diameter (`28dp`) centered directly above the camera punch-hole.
+- Fixed `Expanded` card centering on devices with corner camera punch-holes (e.g. Nothing Phone 1).
+- Added `layoutInDisplayCutoutMode = ALWAYS` (API 30+) / `SHORT_EDGES` (API 28-29) in `MainActivity` for uninhibited hardware cutout detection.
+- Restored `gradlew.bat` for native Windows development and Gradle builds.
+
 ## [0.2.0] - 2026-09-07
 ### Changed
 - Reworked camera cutout detection to prioritize live geometry from the attached overlay window over device-specific profiles.
