@@ -1,7 +1,6 @@
 package com.nothingisland.app.ui.components
 
 import androidx.compose.animation.AnimatedContent
-import androidx.compose.animation.SizeTransform
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.animateDp
@@ -17,6 +16,7 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.size
@@ -288,41 +288,34 @@ fun NothingIslandRoot(
                 val isToExpanded = targetState is IslandState.Expanded
                 val isFromExpanded = initialState is IslandState.Expanded
 
-                when {
+                val transform = when {
                     isIntraCompact -> {
                         // Intra-compact transitions: pure crossfade without scale jitter or size clashes
-                        (fadeIn(animationSpec = androidx.compose.animation.core.tween(durationMillis = 140, delayMillis = 30)) togetherWith
-                         fadeOut(animationSpec = androidx.compose.animation.core.tween(durationMillis = 90))).using(
-                            SizeTransform(clip = false) { _, _ -> null }
-                        )
+                        fadeIn(animationSpec = androidx.compose.animation.core.tween(durationMillis = 140, delayMillis = 30)) togetherWith
+                        fadeOut(animationSpec = androidx.compose.animation.core.tween(durationMillis = 90))
                     }
                     isToExpanded -> {
                         // Expanding: smooth fade with gentle scale-up
                         (fadeIn(animationSpec = androidx.compose.animation.core.tween(durationMillis = 180, delayMillis = 40)) +
                          scaleIn(initialScale = 0.94f, animationSpec = spring(dampingRatio = 0.85f, stiffness = Spring.StiffnessMedium))) togetherWith
                         (fadeOut(animationSpec = androidx.compose.animation.core.tween(durationMillis = 100)) +
-                         scaleOut(targetScale = 0.94f, animationSpec = androidx.compose.animation.core.tween(durationMillis = 100))).using(
-                            SizeTransform(clip = false) { _, _ -> null }
-                        )
+                         scaleOut(targetScale = 0.94f, animationSpec = androidx.compose.animation.core.tween(durationMillis = 100)))
                     }
                     isFromExpanded -> {
                         // Collapsing back to compact: clean exit
-                        (fadeIn(animationSpec = androidx.compose.animation.core.tween(durationMillis = 140, delayMillis = 30))) togetherWith
+                        fadeIn(animationSpec = androidx.compose.animation.core.tween(durationMillis = 140, delayMillis = 30)) togetherWith
                         (fadeOut(animationSpec = androidx.compose.animation.core.tween(durationMillis = 90)) +
-                         scaleOut(targetScale = 0.95f, animationSpec = androidx.compose.animation.core.tween(durationMillis = 90))).using(
-                            SizeTransform(clip = false) { _, _ -> null }
-                        )
+                         scaleOut(targetScale = 0.95f, animationSpec = androidx.compose.animation.core.tween(durationMillis = 90)))
                     }
                     else -> {
                         // Idle <-> Compact
                         (fadeIn(animationSpec = androidx.compose.animation.core.tween(durationMillis = 160, delayMillis = 30)) +
                          scaleIn(initialScale = 0.92f, animationSpec = spring(dampingRatio = 1.0f, stiffness = Spring.StiffnessMedium))) togetherWith
                         (fadeOut(animationSpec = androidx.compose.animation.core.tween(durationMillis = 110)) +
-                         scaleOut(targetScale = 0.92f, animationSpec = androidx.compose.animation.core.tween(durationMillis = 110))).using(
-                            SizeTransform(clip = false) { _, _ -> null }
-                        )
+                         scaleOut(targetScale = 0.92f, animationSpec = androidx.compose.animation.core.tween(durationMillis = 110)))
                     }
                 }
+                transform.using(null)
             },
             label = "IslandContentMorph"
         ) { targetState ->

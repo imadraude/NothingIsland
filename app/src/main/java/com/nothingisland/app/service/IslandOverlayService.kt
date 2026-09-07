@@ -31,6 +31,7 @@ import androidx.savedstate.setViewTreeSavedStateRegistryOwner
 import com.nothingisland.app.IslandApplication
 import com.nothingisland.app.R
 import com.nothingisland.app.core.cutout.CameraCutoutDetector
+import com.nothingisland.app.model.CutoutConfig
 import com.nothingisland.app.model.IslandState
 import com.nothingisland.app.receiver.BatteryStateReceiver
 import com.nothingisland.app.ui.MainActivity
