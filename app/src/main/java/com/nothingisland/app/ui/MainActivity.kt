@@ -492,7 +492,7 @@ fun MainScreen() {
                 pillHeight = it
                 isAutoDetected = false
             },
-            valueRange = 28f..44f,
+            valueRange = 28f..52f,
             colors = SliderDefaults.colors(
                 thumbColor = NothingRed,
                 activeTrackColor = NothingRed,

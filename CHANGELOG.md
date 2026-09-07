@@ -5,7 +5,12 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [0.1.9] - 2026-09-07
+### Fixed
+- Fixed camera cutout peek issue on Nothing Phone (2a): Increased resting pill height to 40dp (with dynamic status bar height adaptation) to provide 6dp of solid black OLED coverage above and below the 28dp camera cutout.
+- Added dynamic status bar height detection in `CameraCutoutDetector` (`WindowInsets.Type.statusBars()` with AOSP `dimen.status_bar_height` fallback) ensuring the pill aligns seamlessly with the status bar.
+- Migrated shared preferences to `is_configured_v3` so existing devices automatically adopt the corrected dimensions without requiring manual resets.
+- Expanded calibration pill height slider range in `MainActivity` from 28-44dp to 28-52dp.
 
 ## [0.1.8] - 2026-09-07
 ### Fixed

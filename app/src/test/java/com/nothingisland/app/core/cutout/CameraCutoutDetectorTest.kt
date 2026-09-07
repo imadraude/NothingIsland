@@ -75,8 +75,8 @@ class CameraCutoutDetectorTest {
         assertEquals(0f, config.cameraCenterXOffsetDp, 0.01f)
         assertEquals(9f, config.cameraTopMarginDp, 0.01f)
         assertEquals(28f, config.cameraDiameterDp, 0.01f)
-        // Pill height = diameter + 6dp = 34dp
-        assertEquals(34f, config.compactPillHeightDp, 0.01f)
+        // Pill height = diameter + 12dp = 40dp (generous coverage)
+        assertEquals(40f, config.compactPillHeightDp, 0.01f)
         assertTrue(config.isAutoDetected)
     }
 
@@ -103,6 +103,7 @@ class CameraCutoutDetectorTest {
         assertEquals(-30f, config.cameraCenterXOffsetDp, 0.01f)
         assertEquals(9f, config.cameraTopMarginDp, 0.01f)
         assertEquals(28f, config.cameraDiameterDp, 0.01f)
+        assertEquals(40f, config.compactPillHeightDp, 0.01f)
     }
 
     @Test
@@ -127,5 +128,29 @@ class CameraCutoutDetectorTest {
 
         // Must snap strictly to 0f to eliminate jitter and misalignment
         assertEquals(0f, config.cameraCenterXOffsetDp, 0.0f)
+        assertEquals(40f, config.compactPillHeightDp, 0.01f)
+    }
+
+    @Test
+    fun cutoutConfig_pillTopMargin_ensuresCompleteCameraCoverage() {
+        val config = CutoutConfig(
+            cameraTopMarginDp = 8f,
+            cameraDiameterDp = 28f,
+            compactPillHeightDp = 40f
+        )
+        // camera center = 8 + 14 = 22dp
+        // pillTopMargin = 22 - 20 = 2dp
+        assertEquals(22f, config.cameraCenterYDp, 0.01f)
+        assertEquals(2f, config.pillTopMarginDp, 0.01f)
+
+        // Pill top is at 2dp, camera top is at 8dp -> 6dp bezel above camera
+        val topCoverage = config.cameraTopMarginDp - config.pillTopMarginDp
+        assertEquals(6f, topCoverage, 0.01f)
+
+        // Pill bottom is at 2 + 40 = 42dp, camera bottom is at 8 + 28 = 36dp -> 6dp bezel below camera
+        val pillBottom = config.pillTopMarginDp + config.compactPillHeightDp
+        val cameraBottom = config.cameraTopMarginDp + config.cameraDiameterDp
+        val bottomCoverage = pillBottom - cameraBottom
+        assertEquals(6f, bottomCoverage, 0.01f)
     }
 }

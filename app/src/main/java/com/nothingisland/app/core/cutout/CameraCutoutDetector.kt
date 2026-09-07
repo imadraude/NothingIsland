@@ -10,6 +10,7 @@ import android.graphics.Rect
 import android.graphics.RectF
 import android.os.Build
 import android.view.DisplayCutout
+import android.view.WindowInsets
 import android.view.WindowManager
 import androidx.annotation.RequiresApi
 import androidx.core.graphics.PathParser
@@ -40,6 +41,48 @@ data class CutoutRawBounds(
 object CameraCutoutDetector {
 
     /**
+     * Resolves the exact status bar height in DP via WindowInsets or AOSP resource dimension.
+     */
+    fun getStatusBarHeightDp(context: Context): Float {
+        val dm = context.resources.displayMetrics
+        val density = dm.density
+        if (density <= 0f) return 44f
+
+        // 1. Android 11+ (API 30+) WindowInsets API
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+            try {
+                val wm = context.getSystemService(Context.WINDOW_SERVICE) as? WindowManager
+                if (wm != null) {
+                    val insets = wm.currentWindowMetrics.windowInsets
+                    val statusBarInsets = insets.getInsetsIgnoringVisibility(WindowInsets.Type.statusBars())
+                    if (statusBarInsets.top > 0) {
+                        return statusBarInsets.top / density
+                    }
+                }
+            } catch (e: Exception) {
+                // Fallback to dimen resource
+            }
+        }
+
+        // 2. Android dimen status_bar_height fallback
+        try {
+            val res = context.resources
+            val resId = res.getIdentifier("status_bar_height", "dimen", "android")
+            if (resId > 0) {
+                val px = res.getDimensionPixelSize(resId)
+                if (px > 0) {
+                    return px / density
+                }
+            }
+        } catch (e: Exception) {
+            // Ignore
+        }
+
+        // 3. Fallback to standard Nothing OS status bar height
+        return 44f
+    }
+
+    /**
      * Factory-calibrated hardware profiles for Nothing Phone models.
      * Guaranteed 100% exact alignment on Nothing Phone (2a), (2), (1).
      */
@@ -47,6 +90,11 @@ object CameraCutoutDetector {
         val model = Build.MODEL ?: ""
         val device = Build.DEVICE ?: ""
         val product = Build.PRODUCT ?: ""
+
+        val statusBarHeightDp = getStatusBarHeightDp(context)
+        // High-precision pill height: covers camera with generous 6dp top & bottom padding
+        val pillHeightDp = maxOf(statusBarHeightDp - 2f, 40f).coerceIn(38f, 46f)
+        val cameraTopMarginDp = ((statusBarHeightDp - 28f) / 2f).coerceIn(6f, 10f)
 
         // Nothing Phone (2a) & Nothing Phone (2a) Plus: Model A142 / Pacman / PacmanPro
         val isNothing2a = model.equals("A142", ignoreCase = true) ||
@@ -57,15 +105,15 @@ object CameraCutoutDetector {
         if (isNothing2a) {
             return CutoutConfig(
                 cameraCenterXOffsetDp = 0f,
-                cameraTopMarginDp = 9f,
+                cameraTopMarginDp = cameraTopMarginDp,
                 cameraDiameterDp = 28f,
-                compactPillHeightDp = 34f,
-                compactMediaWidthDp = 136f,
-                compactNotifWidthDp = 190f,
-                compactBatteryWidthDp = 100f,
-                compactTimerWidthDp = 130f,
-                compactVolumeWidthDp = 110f,
-                compactPillWidthDp = 136f,
+                compactPillHeightDp = pillHeightDp,
+                compactMediaWidthDp = 144f,
+                compactNotifWidthDp = 196f,
+                compactBatteryWidthDp = 104f,
+                compactTimerWidthDp = 134f,
+                compactVolumeWidthDp = 114f,
+                compactPillWidthDp = 144f,
                 expandedCardWidthDp = 340f,
                 expandedCardHeightDp = 190f,
                 isAutoDetected = true
@@ -80,15 +128,15 @@ object CameraCutoutDetector {
         if (isNothing2) {
             return CutoutConfig(
                 cameraCenterXOffsetDp = 0f,
-                cameraTopMarginDp = 9f,
+                cameraTopMarginDp = cameraTopMarginDp,
                 cameraDiameterDp = 28f,
-                compactPillHeightDp = 34f,
-                compactMediaWidthDp = 136f,
-                compactNotifWidthDp = 190f,
-                compactBatteryWidthDp = 100f,
-                compactTimerWidthDp = 130f,
-                compactVolumeWidthDp = 110f,
-                compactPillWidthDp = 136f,
+                compactPillHeightDp = pillHeightDp,
+                compactMediaWidthDp = 144f,
+                compactNotifWidthDp = 196f,
+                compactBatteryWidthDp = 104f,
+                compactTimerWidthDp = 134f,
+                compactVolumeWidthDp = 114f,
+                compactPillWidthDp = 144f,
                 expandedCardWidthDp = 340f,
                 expandedCardHeightDp = 190f,
                 isAutoDetected = true
@@ -107,15 +155,15 @@ object CameraCutoutDetector {
             val screenCenterXDp = screenWidthDp / 2f
             return CutoutConfig(
                 cameraCenterXOffsetDp = cameraCenterXDp - screenCenterXDp,
-                cameraTopMarginDp = 11f,
+                cameraTopMarginDp = 10f,
                 cameraDiameterDp = 28f,
-                compactPillHeightDp = 34f,
-                compactMediaWidthDp = 136f,
-                compactNotifWidthDp = 190f,
-                compactBatteryWidthDp = 100f,
-                compactTimerWidthDp = 130f,
-                compactVolumeWidthDp = 110f,
-                compactPillWidthDp = 136f,
+                compactPillHeightDp = pillHeightDp,
+                compactMediaWidthDp = 144f,
+                compactNotifWidthDp = 196f,
+                compactBatteryWidthDp = 104f,
+                compactTimerWidthDp = 134f,
+                compactVolumeWidthDp = 114f,
+                compactPillWidthDp = 144f,
                 expandedCardWidthDp = 340f,
                 expandedCardHeightDp = 190f,
                 isAutoDetected = true
@@ -390,20 +438,20 @@ object CameraCutoutDetector {
         val diameterDp = rawDiameterDp.coerceIn(22f, 36f)
         val topMarginDp = rawTopMarginDp.coerceIn(6f, 18f)
 
-        // Resting pill height: diameter + 6dp for OLED bezel, min 32dp
-        val pillHeightDp = (diameterDp + 6f).coerceAtLeast(32f)
+        // Resting pill height: diameter + 12dp for generous OLED coverage, clamp to 38..46dp
+        val pillHeightDp = (diameterDp + 12f).coerceIn(38f, 46f)
 
         return CutoutConfig(
             cameraCenterXOffsetDp = centerXOffsetDp,
             cameraTopMarginDp = topMarginDp,
             cameraDiameterDp = diameterDp,
             compactPillHeightDp = pillHeightDp,
-            compactMediaWidthDp = 136f,
-            compactNotifWidthDp = 190f,
-            compactBatteryWidthDp = 100f,
-            compactTimerWidthDp = 130f,
-            compactVolumeWidthDp = 110f,
-            compactPillWidthDp = 136f,
+            compactMediaWidthDp = 144f,
+            compactNotifWidthDp = 196f,
+            compactBatteryWidthDp = 104f,
+            compactTimerWidthDp = 134f,
+            compactVolumeWidthDp = 114f,
+            compactPillWidthDp = 144f,
             expandedCardWidthDp = 340f,
             expandedCardHeightDp = 190f,
             isAutoDetected = true
