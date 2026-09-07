@@ -126,17 +126,6 @@ fun MainScreen() {
         isAutoDetected = isAutoDetected
     )
 
-    val currentAppConfig by IslandApplication.cutoutConfigFlow.collectAsState()
-    LaunchedEffect(currentAppConfig) {
-        if (currentAppConfig.isAutoDetected && isAutoDetected) {
-            topMargin = currentAppConfig.cameraTopMarginDp
-            centerXOffset = currentAppConfig.cameraCenterXOffsetDp
-            pillHeight = currentAppConfig.compactPillHeightDp
-            cameraDiameter = currentAppConfig.cameraDiameterDp
-            compactWidth = currentAppConfig.compactPillWidthDp
-        }
-    }
-
     LaunchedEffect(liveConfig) {
         if (!isAutoDetected) {
             IslandApplication.saveManualConfig(liveConfig)

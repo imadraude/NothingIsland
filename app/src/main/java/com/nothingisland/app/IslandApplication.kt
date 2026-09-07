@@ -28,19 +28,6 @@ class IslandApplication : Application() {
                 saveToPrefs(value)
             }
 
-        fun onCutoutAutoDetected(detected: CutoutConfig) {
-            try {
-                val prefs = instance.getSharedPreferences("cutout_prefs", Context.MODE_PRIVATE)
-                val isManual = prefs.getBoolean("is_manual_override", false)
-                if (!isManual) {
-                    _cutoutConfig.value = detected
-                    saveToPrefs(detected, isManual = false)
-                }
-            } catch (e: Exception) {
-                e.printStackTrace()
-            }
-        }
-
         fun resetToDefaults() {
             try {
                 val prefs = instance.getSharedPreferences("cutout_prefs", Context.MODE_PRIVATE)

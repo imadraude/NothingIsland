@@ -104,4 +104,28 @@ class CameraCutoutDetectorTest {
         assertEquals(9f, config.cameraTopMarginDp, 0.01f)
         assertEquals(28f, config.cameraDiameterDp, 0.01f)
     }
+
+    @Test
+    fun buildConfigFromRawBounds_nearCenter_snapsToZeroOffset() {
+        val density = 3.0f
+        val displayWidth = 1080
+        // Cutout slightly offset by 2dp (6px) due to subpixel rendering or OEM rounding
+        val centerXPx = (1080f / 2f) + 6f // 546px
+        val diameterPx = 84f // 28dp
+        val rawBounds = CutoutRawBounds(
+            left = centerXPx - 42f,
+            top = 27f,
+            right = centerXPx + 42f,
+            bottom = 111f
+        )
+
+        val config = CameraCutoutDetector.buildConfigFromRawBounds(
+            bounds = rawBounds,
+            displayWidth = displayWidth,
+            density = density
+        )
+
+        // Must snap strictly to 0f to eliminate jitter and misalignment
+        assertEquals(0f, config.cameraCenterXOffsetDp, 0.0f)
+    }
 }

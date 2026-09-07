@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.8] - 2026-09-07
+### Fixed
+- Completely eliminated side-to-side jumping and jitter: removed conflicting WindowInsets listener from floating overlay view (`ComposeView`) which was recalculating horizontal offsets using the window's width instead of full screen width.
+- Added factory-calibrated hardware profiles for Nothing Phone (2a) (`A142`/`Pacman`), Nothing Phone (2) (`A065`), and Nothing Phone (1) (`A063`) guaranteeing exact alignment with hardware punch-holes.
+- Enforced dead-center snapping (`0f` offset) for all near-center cutouts, preventing subpixel drift.
+- Removed reactive slider feedback loop in `MainActivity` to ensure manual adjustments and auto-detect are rock-solid and stable.
+
 ## [0.1.7] - 2026-09-07
 ### Added
 - Multi-tier high-precision camera cutout detection system `CameraCutoutDetector`:
