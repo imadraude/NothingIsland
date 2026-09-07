@@ -8,8 +8,10 @@ import android.graphics.Matrix
 import android.graphics.Path
 import android.graphics.Rect
 import android.graphics.RectF
+import android.hardware.display.DisplayManager
 import android.os.Build
 import android.util.DisplayMetrics
+import android.view.Display
 import android.view.DisplayCutout
 import android.view.WindowInsets
 import android.view.WindowManager
@@ -99,8 +101,7 @@ object CameraCutoutDetector {
         val product = Build.PRODUCT ?: ""
 
         val statusBarHeightDp = getStatusBarHeightDp(context)
-        // High-precision pill height: covers camera with generous 6dp top & bottom padding
-        val pillHeightDp = maxOf(statusBarHeightDp - 2f, 40f).coerceIn(38f, 46f)
+        val pillHeightDp = 28f
         val cameraTopMarginDp = ((statusBarHeightDp - 28f) / 2f).coerceIn(6f, 10f)
 
         // Nothing Phone (2a) & Nothing Phone (2a) Plus: Model A142 / Pacman / PacmanPro
@@ -181,13 +182,67 @@ object CameraCutoutDetector {
     }
 
     /**
-     * Primary detection method using live DisplayCutout from an attached Window.
+     * Resolves the DisplayCutout directly from the physical Display (API 28+).
+     * This provides absolute unclipped display coordinates that do not depend on window boundaries.
+     */
+    fun getDisplayCutout(context: Context): DisplayCutout? {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+            try {
+                context.display?.cutout?.let { return it }
+            } catch (e: Exception) {
+                // Ignore
+            }
+        }
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+            try {
+                val dm = context.getSystemService(Context.DISPLAY_SERVICE) as? DisplayManager
+                val display = dm?.getDisplay(Display.DEFAULT_DISPLAY)
+                display?.cutout?.let { return it }
+            } catch (e: Exception) {
+                // Ignore
+            }
+            try {
+                val wm = context.getSystemService(Context.WINDOW_SERVICE) as? WindowManager
+                @Suppress("DEPRECATION")
+                val display = wm?.defaultDisplay
+                display?.cutout?.let { return it }
+            } catch (e: Exception) {
+                // Ignore
+            }
+        }
+        return null
+    }
+
+    /**
+     * Identifies the bounding rectangle belonging to the front selfie camera.
+     * Searches through all cutout rectangles (handling centered and corner punch-holes).
+     */
+    fun findTopCameraBoundingRect(cutout: DisplayCutout, displayHeight: Int): Rect? {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+            val rects = cutout.boundingRects
+            val topRects = rects.filter { !it.isEmpty && (it.top == 0 || it.centerY() < displayHeight / 3) }
+            if (topRects.isNotEmpty()) {
+                return topRects.minByOrNull { it.top }
+            }
+        }
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            val topRect = cutout.boundingRectTop
+            if (!topRect.isEmpty) return topRect
+        }
+        return null
+    }
+
+    /**
+     * Primary detection method using live DisplayCutout from an attached Window or Display.
+     * If [viewLocationOnScreen] is supplied, window-relative cutout coordinates are translated
+     * to absolute screen coordinates.
      */
     fun detectFromCutout(
         context: Context,
         cutout: DisplayCutout,
         displayWidth: Int,
-        displayHeight: Int
+        displayHeight: Int,
+        viewLocationOnScreen: Pair<Int, Int>? = null
     ): CutoutConfig? {
         val isPortrait = context.resources.configuration.orientation != Configuration.ORIENTATION_LANDSCAPE
         if (!isPortrait) {
@@ -202,11 +257,21 @@ object CameraCutoutDetector {
         val actualDisplayWidth = if (displayWidth > 300) displayWidth else dm.widthPixels
         val actualDisplayHeight = if (displayHeight > 300) displayHeight else dm.heightPixels
 
+        val cameraRect = findTopCameraBoundingRect(cutout, actualDisplayHeight)
+
         // 1. Android 12+ (API 31+): Exact vector cutoutPath
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-            val pathBounds = detectFromCutoutPath(cutout)
+            val pathBounds = detectFromCutoutPath(cutout, cameraRect)
             if (pathBounds != null) {
-                return buildConfigFromRawBounds(pathBounds, actualDisplayWidth, density)
+                val translatedBounds = if (viewLocationOnScreen != null) {
+                    CutoutRawBounds(
+                        left = pathBounds.left + viewLocationOnScreen.first,
+                        top = pathBounds.top + viewLocationOnScreen.second,
+                        right = pathBounds.right + viewLocationOnScreen.first,
+                        bottom = pathBounds.bottom + viewLocationOnScreen.second
+                    )
+                } else pathBounds
+                return buildConfigFromRawBounds(translatedBounds, actualDisplayWidth, density)
             }
         }
 
@@ -216,21 +281,27 @@ object CameraCutoutDetector {
             return buildConfigFromRawBounds(svgBounds, actualDisplayWidth, density)
         }
 
-        // 3. Heuristic fallback based on boundingRectTop or boundingRects
-        val topRect = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-            cutout.boundingRectTop
-        } else {
-            cutout.boundingRects.firstOrNull { it.top == 0 || it.centerY() < actualDisplayHeight / 2 }
-        }
-
-        if (topRect != null && !topRect.isEmpty) {
+        // 3. Heuristic fallback based on cameraRect
+        if (cameraRect != null && !cameraRect.isEmpty) {
+            val statusBarHeightPx = getStatusBarHeightDp(context) * density
+            val screenCameraRect = if (viewLocationOnScreen != null) {
+                Rect(
+                    cameraRect.left + viewLocationOnScreen.first,
+                    cameraRect.top + viewLocationOnScreen.second,
+                    cameraRect.right + viewLocationOnScreen.first,
+                    cameraRect.bottom + viewLocationOnScreen.second
+                )
+            } else {
+                cameraRect
+            }
             val heuristicBounds = calculateHeuristicBounds(
-                top = topRect.top.toFloat(),
-                bottom = topRect.bottom.toFloat(),
-                left = topRect.left.toFloat(),
-                right = topRect.right.toFloat(),
+                top = screenCameraRect.top.toFloat(),
+                bottom = screenCameraRect.bottom.toFloat(),
+                left = screenCameraRect.left.toFloat(),
+                right = screenCameraRect.right.toFloat(),
                 displayWidth = actualDisplayWidth,
-                density = density
+                density = density,
+                statusBarHeightPx = statusBarHeightPx
             )
             return buildConfigFromRawBounds(heuristicBounds, actualDisplayWidth, density)
         }
@@ -242,29 +313,32 @@ object CameraCutoutDetector {
      * Detection from Context (Activity, Service or Application).
      */
     fun detectFromContext(context: Context): CutoutConfig? {
-        val dm = context.resources.displayMetrics
+        val (width, height) = getFullDisplaySize(context)
         var liveResult: CutoutConfig? = null
 
-        // Live data from a real window is authoritative. Profiles only fill gaps left by OEMs.
-        if (context is Activity) {
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
-                val cutout = context.window?.decorView?.rootWindowInsets?.displayCutout
-                if (cutout != null) {
-                    val (width, height) = getFullDisplaySize(context)
-                    liveResult = detectFromCutout(context, cutout, width, height)
-                }
+        // 1. Direct Display.cutout (API 28+) - provides true physical screen cutout
+        val displayCutout = getDisplayCutout(context)
+        if (displayCutout != null) {
+            liveResult = detectFromCutout(context, displayCutout, width, height)
+        }
+
+        // 2. Activity Window decorView rootWindowInsets if available
+        if (liveResult == null && context is Activity && Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+            val cutout = context.window?.decorView?.rootWindowInsets?.displayCutout
+            if (cutout != null) {
+                liveResult = detectFromCutout(context, cutout, width, height)
             }
         }
 
+        // 3. WindowManager currentWindowMetrics (API 30+)
         if (liveResult == null && Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
             try {
                 val wm = context.getSystemService(Context.WINDOW_SERVICE) as? WindowManager
                 if (wm != null) {
                     val metrics = wm.currentWindowMetrics
                     val cutout = metrics.windowInsets.displayCutout
-                    val bounds = metrics.bounds
                     if (cutout != null) {
-                        liveResult = detectFromCutout(context, cutout, bounds.width(), bounds.height())
+                        liveResult = detectFromCutout(context, cutout, width, height)
                     }
                 }
             } catch (e: Exception) {
@@ -272,6 +346,7 @@ object CameraCutoutDetector {
             }
         }
 
+        val dm = context.resources.displayMetrics
         val svgBounds = parseBuiltInDisplayCutoutSvg(dm.widthPixels, dm.heightPixels, dm.density)
         val svgResult = svgBounds?.let { buildConfigFromRawBounds(it, dm.widthPixels, dm.density) }
         return chooseDetectionResult(liveResult, getDeviceHardwareConfig(context), svgResult)
@@ -280,8 +355,25 @@ object CameraCutoutDetector {
     fun getFullDisplaySize(context: Context): Pair<Int, Int> {
         val wm = context.getSystemService(Context.WINDOW_SERVICE) as? WindowManager
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R && wm != null) {
-            val bounds = wm.maximumWindowMetrics.bounds
-            return bounds.width() to bounds.height()
+            try {
+                val bounds = wm.maximumWindowMetrics.bounds
+                return bounds.width() to bounds.height()
+            } catch (e: Exception) {
+                // fallback
+            }
+        }
+
+        try {
+            val dm = context.getSystemService(Context.DISPLAY_SERVICE) as? DisplayManager
+            val display = dm?.getDisplay(Display.DEFAULT_DISPLAY)
+            if (display != null) {
+                val metrics = DisplayMetrics()
+                @Suppress("DEPRECATION")
+                display.getRealMetrics(metrics)
+                return metrics.widthPixels to metrics.heightPixels
+            }
+        } catch (e: Exception) {
+            // Ignore
         }
 
         @Suppress("DEPRECATION")
@@ -295,32 +387,34 @@ object CameraCutoutDetector {
     }
 
     @RequiresApi(Build.VERSION_CODES.S)
-    private fun detectFromCutoutPath(cutout: DisplayCutout): CutoutRawBounds? {
+    fun detectFromCutoutPath(cutout: DisplayCutout, cameraRect: Rect?): CutoutRawBounds? {
         val fullPath = cutout.cutoutPath ?: return null
-        val topRect = cutout.boundingRectTop
+        val targetRect = cameraRect ?: if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            cutout.boundingRectTop
+        } else null
 
-        if (!topRect.isEmpty) {
+        if (targetRect != null && !targetRect.isEmpty) {
             val clipPath = Path().apply {
-                addRect(RectF(topRect), Path.Direction.CW)
+                addRect(RectF(targetRect), Path.Direction.CW)
             }
             val topCutoutPath = Path(fullPath)
             if (topCutoutPath.op(clipPath, Path.Op.INTERSECT)) {
                 val bounds = RectF()
                 topCutoutPath.computeBounds(bounds, true)
-                if (!bounds.isEmpty && bounds.width() > 0 && bounds.height() > 0) {
+                if (!bounds.isEmpty && bounds.width() > 0f && bounds.height() > 0f) {
                     return CutoutRawBounds(bounds.left, bounds.top, bounds.right, bounds.bottom)
                 }
             }
         }
 
-        val bounds = RectF()
-        fullPath.computeBounds(bounds, true)
-        return if (!bounds.isEmpty && bounds.width() > 0 && bounds.height() > 0) {
-            CutoutRawBounds(bounds.left, bounds.top, bounds.right, bounds.bottom)
+        val fallbackBounds = RectF()
+        fullPath.computeBounds(fallbackBounds, true)
+        return if (!fallbackBounds.isEmpty && fallbackBounds.width() > 0f && fallbackBounds.height() > 0f) {
+            CutoutRawBounds(fallbackBounds.left, fallbackBounds.top, fallbackBounds.right, fallbackBounds.bottom)
         } else null
     }
 
-    private fun parseBuiltInDisplayCutoutSvg(
+    fun parseBuiltInDisplayCutoutSvg(
         displayWidth: Int,
         displayHeight: Int,
         density: Float
@@ -400,28 +494,30 @@ object CameraCutoutDetector {
         left: Float,
         right: Float,
         displayWidth: Int,
-        density: Float
+        density: Float,
+        statusBarHeightPx: Float = 0f
     ): CutoutRawBounds {
-        val rectWidthDp = (right - left) / density
-        val rectBottomDp = bottom / density
-        val topPx = if (top > 0) {
-            top
-        } else {
-            val estimatedDiameterDp = if (rectWidthDp in 20f..40f) rectWidthDp else 28f
-            val topMarginDp = ((rectBottomDp - estimatedDiameterDp) / 2f).coerceIn(6f, 16f)
-            topMarginDp * density
-        }
-
-        val diameterPx = if (rectWidthDp in 20f..40f) {
-            right - left
-        } else {
-            28f * density
-        }
-
-        val centerXPx = if ((right - left) > 0 && rectWidthDp in 20f..100f) {
+        val rectWidth = right - left
+        val rectHeight = bottom - top
+        val centerXPx = if (rectWidth > 0 && (rectWidth / density) in 16f..120f) {
             (left + right) / 2f
         } else {
             displayWidth / 2f
+        }
+        val rectWidthDp = rectWidth / density
+
+        val (topPx, diameterPx) = if (top > 0) {
+            top to maxOf(rectWidth, rectHeight)
+        } else {
+            val estimatedDiameterDp = if (rectWidthDp in 16f..55f) rectWidthDp else 28f
+            val diameter = estimatedDiameterDp * density
+            val rectBottomDp = bottom / density
+            val topMarginDp = if (statusBarHeightPx > diameter) {
+                ((statusBarHeightPx - diameter) / (2f * density)).coerceIn(6f, 16f)
+            } else {
+                ((rectBottomDp - estimatedDiameterDp) / 2f).coerceIn(6f, 16f)
+            }
+            (topMarginDp * density) to diameter
         }
 
         return CutoutRawBounds(
@@ -460,7 +556,7 @@ object CameraCutoutDetector {
         val diameterDp = rawDiameterDp.coerceIn(8f, 100f)
         val topMarginDp = rawTopMarginDp.coerceIn(0f, 100f)
 
-        val pillHeightDp = (diameterDp + 12f).coerceAtLeast(32f)
+        val pillHeightDp = diameterDp
 
         return CutoutConfig(
             cameraCenterXOffsetDp = centerXOffsetDp,

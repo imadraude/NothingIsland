@@ -82,16 +82,19 @@ class IslandOverlayService : Service() {
             setViewTreeSavedStateRegistryOwner(serviceLifecycleOwner)
             setViewTreeViewModelStoreOwner(serviceLifecycleOwner)
 
-            ViewCompat.setOnApplyWindowInsetsListener(this) { _, insetsCompat ->
+            ViewCompat.setOnApplyWindowInsetsListener(this) { v, insetsCompat ->
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
                     insetsCompat.toWindowInsets()?.displayCutout?.let { cutout ->
                         val (displayWidth, displayHeight) =
                             CameraCutoutDetector.getFullDisplaySize(this@IslandOverlayService)
+                        val location = IntArray(2)
+                        v.getLocationOnScreen(location)
                         CameraCutoutDetector.detectFromCutout(
                             context = this@IslandOverlayService,
                             cutout = cutout,
                             displayWidth = displayWidth,
-                            displayHeight = displayHeight
+                            displayHeight = displayHeight,
+                            viewLocationOnScreen = location[0] to location[1]
                         )?.let { detected ->
                             IslandApplication.applyLiveCutoutDetection(detected)
                         }
@@ -109,7 +112,8 @@ class IslandOverlayService : Service() {
                     ) {
                         NothingIslandRoot(
                             stateManager = IslandApplication.stateManager,
-                            config = config
+                            config = config,
+                            applyHorizontalCutoutOffset = false
                         )
                     }
                 }
@@ -163,7 +167,10 @@ class IslandOverlayService : Service() {
         val density = resources.displayMetrics.density
 
         val (wDp, hDp, touchable) = when (state) {
-            is IslandState.Idle -> Triple(1, 1, false)
+            is IslandState.Idle -> {
+                val windowH = config.cameraTopMarginDp + config.cameraDiameterDp
+                Triple(config.cameraDiameterDp.toInt(), windowH.toInt(), false)
+            }
             is IslandState.Compact -> {
                 val targetW = when (state) {
                     is IslandState.Compact.Notification -> config.compactNotifWidthDp
@@ -202,7 +209,7 @@ class IslandOverlayService : Service() {
             PixelFormat.TRANSLUCENT
         ).apply {
             gravity = Gravity.TOP or Gravity.CENTER_HORIZONTAL
-            x = 0
+            x = if (state is IslandState.Expanded) 0 else (config.cameraCenterXOffsetDp * density).toInt()
             y = 0
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
                 layoutInDisplayCutoutMode = WindowManager.LayoutParams.LAYOUT_IN_DISPLAY_CUTOUT_MODE_ALWAYS

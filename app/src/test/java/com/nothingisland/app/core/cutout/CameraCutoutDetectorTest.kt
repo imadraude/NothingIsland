@@ -76,8 +76,8 @@ class CameraCutoutDetectorTest {
         assertEquals(0f, config.cameraCenterXOffsetDp, 0.01f)
         assertEquals(9f, config.cameraTopMarginDp, 0.01f)
         assertEquals(28f, config.cameraDiameterDp, 0.01f)
-        // Pill height = diameter + 12dp = 40dp (generous coverage)
-        assertEquals(40f, config.compactPillHeightDp, 0.01f)
+        // Pill height = diameter = 28dp (compact grows horizontally)
+        assertEquals(28f, config.compactPillHeightDp, 0.01f)
         assertTrue(config.isAutoDetected)
     }
 
@@ -104,7 +104,7 @@ class CameraCutoutDetectorTest {
         assertEquals(-30f, config.cameraCenterXOffsetDp, 0.01f)
         assertEquals(9f, config.cameraTopMarginDp, 0.01f)
         assertEquals(28f, config.cameraDiameterDp, 0.01f)
-        assertEquals(40f, config.compactPillHeightDp, 0.01f)
+        assertEquals(28f, config.compactPillHeightDp, 0.01f)
     }
 
     @Test
@@ -129,7 +129,7 @@ class CameraCutoutDetectorTest {
 
         // Must snap strictly to 0f to eliminate jitter and misalignment
         assertEquals(0f, config.cameraCenterXOffsetDp, 0.0f)
-        assertEquals(40f, config.compactPillHeightDp, 0.01f)
+        assertEquals(28f, config.compactPillHeightDp, 0.01f)
     }
 
     @Test
@@ -165,21 +165,52 @@ class CameraCutoutDetectorTest {
         val config = CutoutConfig(
             cameraTopMarginDp = 8f,
             cameraDiameterDp = 28f,
-            compactPillHeightDp = 40f
+            compactPillHeightDp = 28f
         )
         // camera center = 8 + 14 = 22dp
-        // pillTopMargin = 22 - 20 = 2dp
+        // pillTopMargin = 22 - 14 = 8dp
         assertEquals(22f, config.cameraCenterYDp, 0.01f)
-        assertEquals(2f, config.pillTopMarginDp, 0.01f)
+        assertEquals(8f, config.pillTopMarginDp, 0.01f)
 
-        // Pill top is at 2dp, camera top is at 8dp -> 6dp bezel above camera
+        // Pill top is at 8dp, camera top is at 8dp -> 0dp bezel above camera
         val topCoverage = config.cameraTopMarginDp - config.pillTopMarginDp
-        assertEquals(6f, topCoverage, 0.01f)
+        assertEquals(0f, topCoverage, 0.01f)
 
-        // Pill bottom is at 2 + 40 = 42dp, camera bottom is at 8 + 28 = 36dp -> 6dp bezel below camera
+        // Pill bottom is at 8 + 28 = 36dp, camera bottom is at 8 + 28 = 36dp -> 0dp bezel below camera
         val pillBottom = config.pillTopMarginDp + config.compactPillHeightDp
         val cameraBottom = config.cameraTopMarginDp + config.cameraDiameterDp
         val bottomCoverage = pillBottom - cameraBottom
-        assertEquals(6f, bottomCoverage, 0.01f)
+        assertEquals(0f, bottomCoverage, 0.01f)
+    }
+
+    @Test
+    fun buildConfigFromRawBounds_cornerPunchHole_calculatesCorrectOffset() {
+        val density = 3.0f
+        val displayWidth = 1080 // Center is 540px = 180dp
+        // Corner camera at X = 28dp = 84px
+        val rawBounds = CutoutRawBounds(left = 42f, top = 30f, right = 126f, bottom = 114f)
+        val config = CameraCutoutDetector.buildConfigFromRawBounds(rawBounds, displayWidth, density)
+        // Expected offset: 28dp - 180dp = -152dp
+        assertEquals(-152f, config.cameraCenterXOffsetDp, 0.01f)
+        assertEquals(28f, config.cameraDiameterDp, 0.01f)
+        assertEquals(28f, config.compactPillHeightDp, 0.01f)
+    }
+
+    @Test
+    fun calculateHeuristicBounds_withStatusBarHeight_usesStatusBarHeight() {
+        val density = 3.0f
+        val displayWidth = 1080
+        val bounds = CameraCutoutDetector.calculateHeuristicBounds(
+            top = 0f,
+            bottom = 120f,
+            left = 498f,
+            right = 582f,
+            displayWidth = displayWidth,
+            density = density,
+            statusBarHeightPx = 135f // 45dp
+        )
+        // (45 - 28) / 2 = 8.5dp -> 25.5px
+        assertEquals(25.5f, bounds.top, 0.01f)
+        assertEquals(84f, bounds.width, 0.01f)
     }
 }

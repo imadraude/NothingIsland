@@ -45,13 +45,14 @@ import com.nothingisland.app.ui.theme.NothingCardBorder
 fun NothingIslandRoot(
     stateManager: IslandStateManager,
     config: CutoutConfig = CutoutConfig(),
+    applyHorizontalCutoutOffset: Boolean = true,
     modifier: Modifier = Modifier
 ) {
     val state by stateManager.state.collectAsState()
 
     // Dimensions derived from current state
     val targetWidth = when (state) {
-        is IslandState.Idle -> 0.dp
+        is IslandState.Idle -> config.cameraDiameterDp.dp
         is IslandState.Compact.Media -> config.compactMediaWidthDp.dp
         is IslandState.Compact.Notification -> config.compactNotifWidthDp.dp
         is IslandState.Compact.Battery -> config.compactBatteryWidthDp.dp
@@ -62,13 +63,13 @@ fun NothingIslandRoot(
     }
 
     val targetHeight = when (state) {
-        is IslandState.Idle -> 0.dp
+        is IslandState.Idle -> config.cameraDiameterDp.dp
         is IslandState.Compact -> config.compactPillHeightDp.dp
         is IslandState.Expanded -> config.expandedCardHeightDp.dp
     }
 
     val targetCornerRadius = when (state) {
-        is IslandState.Idle -> 20.dp
+        is IslandState.Idle -> (config.cameraDiameterDp / 2f).dp
         is IslandState.Compact -> (config.compactPillHeightDp / 2f).dp
         is IslandState.Expanded -> 28.dp
     }
@@ -101,21 +102,19 @@ fun NothingIslandRoot(
         label = "IslandCornerRadius"
     )
 
-    if (state is IslandState.Idle && animatedWidth <= 1.dp) {
-        // Fully collapsed, render nothing to save GPU cycles
-        return
-    }
-
     var dragOffsetY by remember { mutableFloatStateOf(0f) }
     var dragOffsetX by remember { mutableFloatStateOf(0f) }
 
     Box(
         modifier = modifier
-            .offset(x = config.cameraCenterXOffsetDp.dp, y = config.pillTopMarginDp.dp)
+            .offset(
+                x = if (applyHorizontalCutoutOffset) config.cameraCenterXOffsetDp.dp else 0.dp,
+                y = config.pillTopMarginDp.dp
+            )
             .width(animatedWidth)
             .height(animatedHeight)
             .shadow(
-                elevation = if (state is IslandState.Expanded) 12.dp else 4.dp,
+                elevation = if (state is IslandState.Expanded) 12.dp else 0.dp,
                 shape = RoundedCornerShape(animatedCornerRadius)
             )
             .clip(RoundedCornerShape(animatedCornerRadius))

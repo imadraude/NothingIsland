@@ -104,7 +104,7 @@ class IslandApplication : Application() {
                 }
                 val topMargin = prefs.getFloat("top_margin", 8f)
                 val diameter = prefs.getFloat("diameter", 28f)
-                val pillHeight = prefs.getFloat("pill_height", 40f)
+                val pillHeight = prefs.getFloat("pill_height", diameter)
                 val compactWidth = prefs.getFloat("compact_width", 144f)
                 val centerX = prefs.getFloat("center_x", 0f)
                 val isAuto = prefs.getBoolean("is_auto_detected", false)

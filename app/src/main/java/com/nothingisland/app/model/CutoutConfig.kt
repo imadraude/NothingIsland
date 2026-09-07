@@ -10,7 +10,7 @@ data class CutoutConfig(
     val cameraCenterXOffsetDp: Float = 0f,   // Horizontal offset from screen center (0 = dead center)
     val cameraTopMarginDp: Float = 8f,       // Distance from top of screen to top of camera cutout (~8dp on Nothing 2a)
     val cameraDiameterDp: Float = 28f,       // Hardware camera cutout diameter (~27-28dp on Nothing 2a)
-    val compactPillHeightDp: Float = 40f,    // Height of resting pill (diameter + 12dp bezel for full coverage)
+    val compactPillHeightDp: Float = 28f,    // Matches the camera height; compact state grows horizontally only
     val compactMediaWidthDp: Float = 144f,   // Sleek compact width for media playback
     val compactNotifWidthDp: Float = 196f,   // Sleek compact width for notification preview
     val compactBatteryWidthDp: Float = 104f, // Sleek compact width for battery HUD
